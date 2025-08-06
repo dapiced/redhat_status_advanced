@@ -1,15 +1,15 @@
 """
-Red Hat Status Checker - Analytics and AI Module
+Red Hat Status Checker - Statistical Analytics Module
 
-This module provides advanced analytics and AI-powered insights
-for Red Hat service monitoring and alerting.
+This module provides analytics and insights for Red Hat service monitoring.
+While termed "AI" in user-facing documentation for simplicity, the implementation
+is based on statistical methods, not complex machine learning models.
 
-Contains:
-- AIAnalytics class for intelligent monitoring
-- Anomaly detection algorithms
-- Predictive analytics
-- Performance optimization insights
-- Smart alerting with machine learning
+Core Methods:
+- Anomaly Detection: Uses Z-score to identify significant deviations from a historical baseline.
+- Trend Prediction: Uses simple linear regression to forecast future metrics.
+
+This approach provides valuable, actionable insights without the overhead of a full ML framework.
 
 Author: Red Hat Status Checker v3.1.0 - Modular Edition
 """
@@ -33,10 +33,10 @@ from ..utils.decorators import performance_monitor, retry_with_backoff
 
 class AIAnalytics:
     """
-    Advanced AI Analytics Engine for Red Hat Services
+    Statistical Analytics Engine for Red Hat Services.
     
-    Provides intelligent monitoring, anomaly detection, and predictive insights
-    using machine learning algorithms and statistical analysis.
+    This class provides monitoring, anomaly detection, and predictive insights
+    using statistical analysis of historical service data.
     """
     
     def __init__(self, db_path: Optional[str] = None):
@@ -153,7 +153,13 @@ class AIAnalytics:
     
     @performance_monitor
     def detect_anomalies(self, current_metrics: ServiceHealthMetrics) -> List[AnomalyDetection]:
-        """Detect anomalies using statistical analysis and ML algorithms"""
+        """
+        Detect anomalies by comparing current metrics against a historical baseline.
+
+        This method uses a Z-score calculation. A Z-score measures how many
+        standard deviations a data point is from the mean of its baseline. A high
+        Z-score indicates a statistically significant deviation.
+        """
         anomalies = []
         
         try:
@@ -181,7 +187,12 @@ class AIAnalytics:
             return []
     
     def _get_service_baseline(self, service_name: str) -> Optional[Dict[str, float]]:
-        """Calculate baseline metrics for a service"""
+        """
+        Calculate or retrieve a cached statistical baseline for a given service.
+
+        The baseline consists of the mean and standard deviation for key metrics
+        (availability, performance, response time) over the defined learning window.
+        """
         try:
             if service_name in self._service_baselines:
                 return self._service_baselines[service_name]
@@ -202,7 +213,7 @@ class AIAnalytics:
             if len(rows) < self.min_samples:
                 return None
             
-            # Calculate statistical baseline
+            # Calculate statistical baseline from historical data.
             availability_scores = [row[0] for row in rows if row[0] is not None]
             performance_scores = [row[1] for row in rows if row[1] is not None]
             response_times = [row[2] for row in rows if row[2] is not None]
@@ -250,7 +261,8 @@ class AIAnalytics:
             if baseline_std == 0:
                 return anomalies
             
-            # Z-score based anomaly detection
+            # This is a classic statistical method for anomaly detection.
+            # It checks how many standard deviations the current value is from the mean.
             z_score = abs(current_availability - baseline_mean) / baseline_std
             
             if z_score > self.anomaly_threshold:
@@ -336,7 +348,8 @@ class AIAnalytics:
             if len(recent_statuses) < 2:
                 return anomalies
             
-            # Detect frequent status changes (flapping)
+            # Detect frequent status changes (flapping) by checking the number of
+            # unique statuses within a short time window.
             unique_statuses = set(row[0] for row in recent_statuses)
             
             if len(unique_statuses) > 2:  # More than 2 different statuses in an hour
@@ -380,7 +393,13 @@ class AIAnalytics:
     
     @performance_monitor
     def generate_predictions(self, service_name: str, hours_ahead: int = 24) -> List[PredictiveInsight]:
-        """Generate predictive insights for service health"""
+        """
+        Generate predictive insights for service health using linear regression.
+
+        This method calculates the trend of historical data and extrapolates it
+        to predict future metric values. It is a simple forecasting method
+        effective for identifying linear trends.
+        """
         predictions = []
         
         try:
@@ -400,7 +419,7 @@ class AIAnalytics:
             if len(data) < 20:  # Need enough data for prediction
                 return predictions
             
-            # Simple trend-based predictions
+            # Generate predictions by fitting a simple trend line to the data.
             predictions.extend(self._predict_availability_trend(service_name, data, hours_ahead))
             predictions.extend(self._predict_performance_trend(service_name, data, hours_ahead))
             
@@ -420,7 +439,13 @@ class AIAnalytics:
         data: List[Tuple], 
         hours_ahead: int
     ) -> List[PredictiveInsight]:
-        """Predict availability trends using simple linear regression"""
+        """
+        Predicts the future availability trend using simple linear regression.
+
+        Linear regression fits a straight line to the historical data points
+        (y = mx + c), where 'm' is the slope of the trend. This slope is then
+        used to extrapolate a future value.
+        """
         predictions = []
         
         try:
@@ -430,7 +455,8 @@ class AIAnalytics:
             if len(availability_data) < 10:
                 return predictions
             
-            # Simple linear trend calculation
+            # Simple linear trend calculation using the formula for linear regression.
+            # This avoids needing a heavy dependency like numpy or scikit-learn.
             n = len(availability_data)
             sum_x = sum(point[0] for point in availability_data)
             sum_y = sum(point[1] for point in availability_data)
