@@ -1,0 +1,42 @@
+apiVersion: redhatstatus.io/v1alpha1
+kind: RedHatStatus
+metadata:
+  name: redhat-status-checker-example
+spec:
+  # The number of checker instances to deploy.
+  # For a simple watcher, 1 is sufficient. For a web UI, you might want more for high availability.
+  replicas: 1
+
+  # The primary mode for this deployment.
+  # 'watch': Runs in the background, continuously checking status and updating the Prometheus exporter.
+  # 'web': Runs the Flask web UI.
+  # 'exporter': Runs only the exporter, expecting another instance to perform checks.
+  mode: "watch"
+
+  # How often to check for status updates in 'watch' mode.
+  watchSeconds: 120
+
+  # --- Exporter Configuration ---
+  exporterEnabled: true
+  exporterPort: 8000
+
+  # --- Web UI Configuration ---
+  # Disabled by default in watch mode.
+  # To run the web UI, set 'mode' to 'web' and enable this.
+  webUIEnabled: false
+  webUIPort: 5000
+
+  # --- Inline Configuration ---
+  # You can override settings from the default config.json here.
+  # This allows for Kubernetes-native configuration without managing separate config files.
+  config:
+    cache:
+      ttl: 600 # Increase cache time to 10 minutes for this instance
+    notifications:
+      # Example of enabling and configuring webhooks via a CR
+      webhooks:
+        enabled: true
+        # It is recommended to pull sensitive URLs from a Kubernetes Secret
+        # rather than hardcoding them here. An operator could facilitate this.
+        urls:
+          - "https://hooks.slack.com/services/YOUR/SLACK/WEBHOOK/FROM/SECRET"
