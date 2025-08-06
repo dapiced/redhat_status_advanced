@@ -1,0 +1,95 @@
+version: '3.8'
+
+services:
+  # Main testing service
+  redhat-status-test:
+    build:
+      context: .
+      dockerfile: Dockerfile.test
+    container_name: redhat-status-test
+    volumes:
+      # Mount source code for development testing
+      - ./redhat_status:/app/redhat_status:ro
+      - ./tests:/app/tests:ro
+      - ./run_tests.py:/app/run_tests.py:ro
+      - ./pytest.ini:/app/pytest.ini:ro
+      # Mount output directories for test results
+      - ./test-results:/app/test-results
+      - ./coverage-reports:/app/coverage-reports
+    environment:
+      - PYTHONPATH=/app
+      - TESTING=1
+      - PYTEST_CURRENT_TEST=1
+      - REDHAT_STATUS_CACHE_ENABLED=false  # Disable cache for testing
+      - REDHAT_STATUS_DB_ENABLED=false     # Disable DB for testing
+    networks:
+      - test-network
+    command: >
+      sh -c "
+        echo '🧪 Starting comprehensive test suite in Docker container...' &&
+        echo '📊 Running unit tests with pytest...' &&
+        python3 -m pytest tests/ -v --tb=short --junit-xml=/app/test-results/junit.xml --cov=redhat_status --cov-report=html:/app/coverage-reports/html --cov-report=xml:/app/test-results/coverage.xml &&
+        echo '🚀 Running CLI flag tests...' &&
+        python3 run_tests.py --flags &&
+        echo '📋 Running example command tests...' &&
+        python3 run_tests.py --examples &&
+        echo '⚡ Running advanced command tests...' &&
+        python3 run_tests.py --advanced &&
+        echo '✅ All tests completed successfully!'
+      "
+
+  # Parallel testing service for different Python versions
+  redhat-status-test-py39:
+    build:
+      context: .
+      dockerfile: Dockerfile.test
+      args:
+        PYTHON_VERSION: "3.9-slim"
+    container_name: redhat-status-test-py39
+    volumes:
+      - ./redhat_status:/app/redhat_status:ro
+      - ./tests:/app/tests:ro
+      - ./test-results-py39:/app/test-results
+    environment:
+      - PYTHONPATH=/app
+      - TESTING=1
+      - PYTHON_VERSION=3.9
+    networks:
+      - test-network
+    command: python3 -m pytest tests/ -v --tb=short --junit-xml=/app/test-results/junit-py39.xml
+    profiles:
+      - multi-version
+
+  # Performance testing service
+  redhat-status-perf-test:
+    build:
+      context: .
+      dockerfile: Dockerfile.test
+    container_name: redhat-status-perf-test
+    volumes:
+      - ./redhat_status:/app/redhat_status:ro
+      - ./tests:/app/tests:ro
+      - ./performance-results:/app/performance-results
+    environment:
+      - PYTHONPATH=/app
+      - TESTING=1
+      - PERFORMANCE_TESTING=1
+    networks:
+      - test-network
+    command: >
+      sh -c "
+        echo '⚡ Running performance tests...' &&
+        python3 run_tests.py --flags | tee /app/performance-results/flag-tests.log &&
+        python3 redhat_status.py --benchmark | tee /app/performance-results/benchmark.log
+      "
+    profiles:
+      - performance
+
+networks:
+  test-network:
+    driver: bridge
+
+volumes:
+  test-results:
+  coverage-reports:
+  performance-results:

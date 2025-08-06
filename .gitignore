@@ -1,0 +1,80 @@
+# Cache and temporary files
+.cache/
+*.log
+*.tmp
+
+# Temporary analysis and validation scripts
+final_analysis.py
+validate_repo.py
+
+# Export files
+redhat_status_*.json
+redhat_status_*.csv
+redhat_summary_*.txt
+status_history_*.csv
+
+# Database files
+*.db
+*.db-shm
+*.db-wal
+redhat_analytics.db
+redhat_monitoring.db
+
+# AI/ML export files
+ai_analysis_report_*.json
+ai_analysis_report_*.csv
+ai_analysis_report_*.txt
+historical_data_*.json
+historical_data_*.csv
+historical_data_*.txt
+
+# Python cache
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+
+# Environment files
+.venv/
+venv/
+
+# IDE files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Testing result documents
+*TEST_RESULTS.md
+TESTING_*.md
+COMPLETE_*.md
+FLAG_TESTING_*.md
+
+# Temporary test scripts  
+test_key_readme_flags.py
+test_readme_commands.py
+test_specific_commands.py
+
+# Runtime files
+.cache/
+reports/
+.pytest_cache/
+.venv/
+junit.xml
+*.egg-info/
+build.log
+test-results/
+performance-results/
+coverage-reports/
+
+# OS and IDE files
+.DS_Store
+.vscode/
+*.pyc
+__pycache__/
