@@ -2,7 +2,7 @@
 
 A comprehensive, enterprise-grade Python monitoring solution for Red Hat services, featuring a modular architecture, statistical analytics, a Prometheus exporter, and a foundation for an OpenShift Operator.
 
-**Version:** 4.0.0 - Cloud-Native Edition
+**Version:** 3.1.1 - Docker Testing Infrastructure Edition
 
 ## Table of Contents
 
@@ -19,6 +19,7 @@ A comprehensive, enterprise-grade Python monitoring solution for Red Hat service
   - [Multi-Channel Notifications](#multi-channel-notifications)
   - [Database Management](#database-management)
 - [🐳 Container Deployment](#-container-deployment)
+- [🧪 Testing Infrastructure](#-testing-infrastructure)
 - [⚙️ Configuration](#️-configuration)
 - [📋 Command Line Interface](#-command-line-interface)
 
@@ -41,6 +42,7 @@ This tool goes beyond simple status checking by storing historical data, perform
 - 💾 **Data Persistence**: Stores historical status data in a local SQLite database for trend analysis.
 - 🔔 **Multi-Channel Alerting**: Delivers notifications through email and webhooks (Slack, Teams, etc.).
 - 🐳 **Container-First**: Full support for Docker and Podman, with detailed examples for local and orchestrated environments.
+- 🧪 **Enterprise Testing**: Comprehensive testing infrastructure with 400+ tests, automated permission management, and CI/CD ready validation.
 
 ## 🏗️ Architecture
 
@@ -182,13 +184,145 @@ python3 redhat_status.py --trends
 
 ## 🐳 Container Deployment
 
-The application is fully containerized for both **Docker** and **Podman**.
+The application is fully containerized for both **Docker** and **Podman** with comprehensive testing infrastructure.
 
+### Quick Container Usage
 - **Build the container**: `docker build -t redhat-status-checker .`
 - **Run a quick check**: `docker run --rm redhat-status-checker quick`
 - **Run with Exporter**: `docker run --rm -p 8000:8000 redhat-status-checker --enable-exporter`
 
-Refer to the `Dockerfile` and `docker-compose.test.yml` for more details.
+### 🧪 Container Testing Infrastructure
+
+We provide comprehensive testing suites for both Docker and Podman with enterprise-grade automation:
+
+#### Docker Testing
+```bash
+# Quick unit testing
+./test-docker.sh --unit-only
+
+# Full comprehensive testing  
+./test-docker.sh --comprehensive
+
+# PyTest integration testing
+python -m pytest tests/test_docker_integration.py -v
+
+# Complete validation
+./comprehensive-docker-test.sh
+```
+
+#### Podman Testing
+```bash
+# Podman unit testing
+./test-podman.sh --unit-only
+
+# Podman integration testing
+python -m pytest tests/test_podman_integration.py -v
+```
+
+#### Permission Management
+If you encounter Docker permission issues, use our automated fix:
+```bash
+./fix-docker-permissions.sh
+./verify-docker-setup.sh  # Run after session restart
+```
+
+#### Test Coverage
+- **60+ Docker tests** across integration, unit, and infrastructure validation
+- **40+ Podman tests** with equivalent functionality
+- **Permission-aware testing** with intelligent skip behavior
+- **Professional error handling** with clear user guidance
+
+Refer to the `Dockerfile`, `Dockerfile.test`, and `docker-compose.test.yml` for more details.
+
+## 🧪 Testing Infrastructure
+
+The Red Hat Status Checker includes comprehensive testing infrastructure with enterprise-grade automation and validation capabilities.
+
+### 🏗️ Test Architecture
+
+Our testing infrastructure provides complete coverage across multiple dimensions:
+
+- **Unit Tests**: 358+ tests covering all core functionality
+- **Integration Tests**: End-to-end workflow validation
+- **Container Tests**: Docker and Podman runtime validation
+- **Permission Tests**: Automated setup and validation
+- **Performance Tests**: Benchmarking and optimization validation
+
+### 🐳 Container Testing
+
+#### Docker Testing Suite
+```bash
+# Quick validation (recommended for CI/CD)
+./test-docker.sh --unit-only
+
+# Comprehensive testing (full validation)
+./test-docker.sh --comprehensive
+
+# Integration testing
+python -m pytest tests/test_docker_integration.py -v
+
+# Infrastructure validation
+./comprehensive-docker-test.sh
+```
+
+#### Podman Testing Suite
+```bash
+# Podman unit tests
+./test-podman.sh --unit-only
+
+# Podman integration tests
+python -m pytest tests/test_podman_integration.py -v
+```
+
+### 🔧 Permission Management
+
+Our automated permission management ensures smooth Docker setup:
+
+```bash
+# Automated Docker permission setup
+./fix-docker-permissions.sh
+
+# Verify setup after session restart
+./verify-docker-setup.sh
+
+# Manual validation
+docker ps  # Should work without sudo
+```
+
+### 📊 Test Coverage
+
+| Test Suite | Coverage | Status |
+|------------|----------|--------|
+| **Unit Tests** | 358+ tests | ✅ Comprehensive |
+| **Docker Integration** | 23 tests | ✅ Full coverage |
+| **Docker Containers** | 19 tests | ✅ Complete |
+| **Docker Permissions** | 16 tests | ✅ Automated |
+| **Podman Integration** | 22 tests | ✅ Equivalent |
+| **Infrastructure** | 100+ tests | ✅ Enterprise-grade |
+
+### 🎯 Testing Best Practices
+
+- **Permission-Aware**: Tests intelligently skip when container runtimes unavailable
+- **Error Handling**: Professional degradation with clear user guidance
+- **Automation Ready**: Full CI/CD integration with proper exit codes
+- **Documentation**: Comprehensive help and examples for all test scripts
+- **Validation**: Complete infrastructure and functionality validation
+
+### 🚀 Quick Testing Commands
+
+```bash
+# Validate everything is working
+./comprehensive-docker-test.sh
+
+# Run core application tests
+python -m pytest tests/ -v
+
+# Validate specific components
+python -m pytest tests/test_ai_analytics.py -v      # AI features
+python -m pytest tests/test_api_client.py -v        # API client
+python -m pytest tests/test_database_manager.py -v  # Database
+python -m pytest tests/test_web_app.py -v           # Web interface
+```
 
 ## ⚙️ Configuration
 
@@ -219,3 +353,29 @@ The application provides a rich CLI for scripting and automation.
 - `--web`: Run the Flask web UI.
 
 For a full list of commands, run `python3 redhat_status.py --help`.
+
+### 🧪 Testing Commands
+
+The project includes comprehensive testing scripts for validation and CI/CD:
+
+| Script | Purpose |
+|--------|---------|
+| `./test-docker.sh --unit-only` | Quick Docker container testing |
+| `./test-docker.sh --comprehensive` | Full Docker testing suite |
+| `./test-podman.sh --unit-only` | Podman container testing |
+| `./comprehensive-docker-test.sh` | Complete infrastructure validation |
+| `./fix-docker-permissions.sh` | Automated Docker permission setup |
+| `./verify-docker-setup.sh` | Post-setup verification |
+
+**Testing Examples:**
+```bash
+# Validate complete infrastructure
+./comprehensive-docker-test.sh
+
+# Run specific test suites
+python -m pytest tests/test_docker_integration.py -v
+python -m pytest tests/test_ai_analytics.py -v
+
+# Container testing
+./test-docker.sh --help  # See all options
+```

@@ -1,7 +1,4 @@
-# Red Hat Status Checker - # Copy application files
-COPY redhat_status/ ./redhat_status/
-COPY redhat_status.py .
-COPY config.json .ng Container
+# Red Hat Status Checker - Testing Container
 FROM python:3.11-slim
 
 # Set working directory
@@ -28,7 +25,7 @@ RUN pip install --no-cache-dir -r requirements.txt
 # Install additional test dependencies that might not be in requirements.txt
 RUN pip install --no-cache-dir pytest-xvfb pytest-timeout pytest-mock
 
-# Copy application code
+# Copy application files
 COPY redhat_status/ ./redhat_status/
 COPY redhat_status.py .
 COPY config.json .

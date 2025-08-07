@@ -238,11 +238,11 @@ class TestCacheManager:
         cache_manager = CacheManager(short_config)
         
         cache_manager.set('key1', {'data': 1})
-        time.sleep(0.5)  # Wait half the TTL
+        time.sleep(0.6)  # Wait more than half the TTL
         cache_manager.set('key2', {'data': 2})
         
-        # Wait for first item to expire
-        time.sleep(1)
+        # Wait for first item to expire but not the second
+        time.sleep(0.8)  # Total wait for key1: 1.4s (expired), key2: 0.8s (valid)
         
         # Cleanup expired items
         cache_manager._cleanup_expired()
@@ -281,14 +281,21 @@ class TestGetCacheManagerFunction:
         mock_instance = Mock()
         mock_cache_manager.return_value = mock_instance
         
-        # Clear any existing singleton
+        # Store original singleton state
         import redhat_status.core.cache_manager as cache_module
-        cache_module._cache_manager_instance = None
+        original_cache_manager = cache_module._cache_manager
         
-        result = get_cache_manager()
-        
-        mock_cache_manager.assert_called_once()
-        assert result == mock_instance
+        try:
+            # Clear any existing singleton
+            cache_module._cache_manager = None
+            
+            result = get_cache_manager()
+            
+            mock_cache_manager.assert_called_once()
+            assert result == mock_instance
+        finally:
+            # Restore original singleton state
+            cache_module._cache_manager = original_cache_manager
 
 
 class TestCacheManagerConfiguration:
