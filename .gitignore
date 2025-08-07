@@ -2,6 +2,8 @@
 .cache/
 *.log
 *.tmp
+coverage.xml
+.coverage
 
 # Temporary analysis and validation scripts
 final_analysis.py

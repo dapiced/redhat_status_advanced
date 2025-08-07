@@ -28,6 +28,42 @@ class TestPodmanContainerization(unittest.TestCase):
             cls.podman_available = result.returncode == 0
         except (subprocess.TimeoutExpired, FileNotFoundError):
             cls.podman_available = False
+            
+        # Build container if Podman is available
+        if cls.podman_available:
+            cls._ensure_container_built()
+    
+    @classmethod
+    def _ensure_container_built(cls):
+        """Ensure the test container is built and available"""
+        import os
+        original_cwd = os.getcwd()
+        try:
+            os.chdir(cls.project_root)
+            
+            # Check if container already exists
+            check_cmd = ['podman', 'images', '-q', cls.container_name]
+            result = subprocess.run(check_cmd, capture_output=True, text=True, timeout=30)
+            
+            if result.returncode == 0 and result.stdout.strip():
+                # Container exists, we're good
+                return
+            
+            # Build the container
+            build_cmd = [
+                'podman', 'build', 
+                '-f', 'Dockerfile.test',
+                '-t', cls.container_name,
+                '.'
+            ]
+            
+            result = subprocess.run(build_cmd, capture_output=True, text=True, timeout=300)
+            if result.returncode != 0:
+                print(f"Failed to build container: {result.stderr}")
+                cls.podman_available = False
+                
+        finally:
+            os.chdir(original_cwd)
     
     def setUp(self):
         """Set up for individual tests"""
@@ -158,7 +194,7 @@ class TestPodmanContainerization(unittest.TestCase):
         cmd = [
             'podman', 'run', '--rm', self.container_name,
             'python3', '-c', 
-            'import os; print(f"PYTHONPATH={os.environ.get(\"PYTHONPATH\", \"NOT_SET\")}")'
+            'import os; print("PYTHONPATH=" + os.environ.get("PYTHONPATH", "NOT_SET"))'
         ]
         
         result = subprocess.run(cmd, capture_output=True, text=True, timeout=30)

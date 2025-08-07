@@ -234,14 +234,21 @@ class TestGetConfigFunction:
         mock_instance = Mock()
         mock_config_manager.return_value = mock_instance
         
-        # Clear any existing singleton
+        # Store original singleton state
         import redhat_status.config.config_manager as config_module
-        config_module._config_instance = None
+        original_config_instance = config_module._config_instance
         
-        result = get_config()
-        
-        mock_config_manager.assert_called_once()
-        assert result == mock_instance
+        try:
+            # Clear any existing singleton
+            config_module._config_instance = None
+            
+            result = get_config()
+            
+            mock_config_manager.assert_called_once()
+            assert result == mock_instance
+        finally:
+            # Restore original singleton state
+            config_module._config_instance = original_config_instance
 
 
 class TestConfigValidation:
@@ -249,12 +256,29 @@ class TestConfigValidation:
     
     def setup_method(self):
         """Set up test method"""
-        self.config = ConfigManager()
+        # Store original singleton state for cleanup
+        import redhat_status.config.config_manager as config_module
+        self._original_config_instance = config_module._config_instance
+        
+        # Reset global state to avoid cross-test interference
+        config_module._config_instance = None
+        
+        # Use a non-existent config path to avoid loading config.json
+        self.config = ConfigManager(config_path='/non/existent/path.json')
+    
+    def teardown_method(self):
+        """Clean up test method"""
+        # Restore original singleton state
+        import redhat_status.config.config_manager as config_module
+        config_module._config_instance = self._original_config_instance
     
     def test_validate_cache_config(self):
         """Test cache configuration validation"""
+        # Create fresh instance for this test
+        config = ConfigManager(config_path='/non/existent/path.json')
+        
         # Valid cache config
-        self.config.config = {
+        config.config = {
             'cache': {
                 'enabled': True,
                 'ttl': 300,
@@ -262,11 +286,11 @@ class TestConfigValidation:
             }
         }
         
-        result = self.config.validate()
+        result = config.validate()
         assert result['valid'] is True
         
         # Invalid cache config
-        self.config.config = {
+        config.config = {
             'cache': {
                 'enabled': 'invalid',  # Should be boolean
                 'ttl': -1,  # Should be positive
@@ -274,26 +298,30 @@ class TestConfigValidation:
             }
         }
         
-        result = self.config.validate()
+        result = config.validate()
         assert result['valid'] is False
         assert len(result['errors']) > 0
     
     def test_validate_api_config(self):
         """Test API configuration validation"""
+        # Create fresh instance for this test
+        config = ConfigManager(config_path='/non/existent/path.json')
+        
         # Valid API config
-        self.config.config = {
+        config.config = {
             'api': {
                 'timeout': 30,
                 'retries': 3,
                 'base_url': 'https://status.redhat.com'
             }
         }
-        
-        result = self.config.validate()
+
+        result = config.validate()
         assert result['valid'] is True
-        
-        # Invalid API config
-        self.config.config = {
+
+        # Test invalid API config with fresh instance
+        config2 = ConfigManager(config_path='/non/existent/path.json')
+        config2.config = {
             'api': {
                 'timeout': -1,  # Should be positive
                 'retries': 'invalid',  # Should be integer
@@ -301,40 +329,47 @@ class TestConfigValidation:
             }
         }
         
-        result = self.config.validate()
+        result = config2.validate()
         assert result['valid'] is False
         assert len(result['errors']) > 0
     
     def test_validate_database_config(self):
         """Test database configuration validation"""
+        # Create fresh instance for this test
+        config = ConfigManager(config_path='/non/existent/path.json')
+        
         # Valid database config
-        self.config.config = {
+        config.config = {
             'database': {
                 'enabled': True,
                 'path': 'status.db',
                 'cleanup_days': 30
             }
         }
-        
-        result = self.config.validate()
+
+        result = config.validate()
         assert result['valid'] is True
-        
-        # Invalid database config
-        self.config.config = {
+
+        # Test invalid database config with fresh instance
+        config2 = ConfigManager(config_path='/non/existent/path.json')
+        config2.config = {
             'database': {
                 'enabled': 'invalid',  # Should be boolean
                 'cleanup_days': -1  # Should be positive
             }
         }
         
-        result = self.config.validate()
+        result = config2.validate()
         assert result['valid'] is False
         assert len(result['errors']) > 0
     
     def test_validate_notifications_config(self):
         """Test notifications configuration validation"""
+        # Create fresh instance for this test
+        config = ConfigManager(config_path='/non/existent/path.json')
+        
         # Valid notifications config
-        self.config.config = {
+        config.config = {
             'notifications': {
                 'email': {
                     'enabled': True,
@@ -347,12 +382,13 @@ class TestConfigValidation:
                 }
             }
         }
-        
-        result = self.config.validate()
+
+        result = config.validate()
         assert result['valid'] is True
-        
-        # Invalid notifications config
-        self.config.config = {
+
+        # Test invalid notifications config with fresh instance
+        config2 = ConfigManager(config_path='/non/existent/path.json')
+        config2.config = {
             'notifications': {
                 'email': {
                     'enabled': True,
@@ -362,7 +398,7 @@ class TestConfigValidation:
             }
         }
         
-        result = self.config.validate()
+        result = config2.validate()
         assert result['valid'] is False
         assert len(result['errors']) > 0
 

@@ -38,13 +38,11 @@ create_directories() {
 # Build test container
 build_test_container() {
     print_status "Building test container..."
-    if podman build -f Dockerfile.test -t redhat-status-test . > build.log 2>&1; then
-        print_success "Test container built successfully"
+    if timeout 600 podman build -t redhat-status-test -f Dockerfile.test . 2>&1 | tee test-results/build.log; then
+        print_success "Container built successfully"
         return 0
     else
-        print_error "Failed to build test container"
-        echo "Build log:"
-        cat build.log
+        print_error "Failed to build container" >&2
         return 1
     fi
 }
@@ -53,7 +51,7 @@ build_test_container() {
 run_unit_tests() {
     print_status "Running unit tests in container..."
     
-    if podman run --rm \
+    if timeout 300 podman run --rm \
         -v $(pwd)/test-results:/app/test-results \
         -e TESTING=1 \
         redhat-status-test \
@@ -87,11 +85,12 @@ run_cli_tests() {
 run_integration_tests() {
     print_status "Running integration tests in container..."
     
-    if podman run --rm \
-        -v $(pwd)/test-results:/app/test-results \
-        -e TESTING=1 \
-        redhat-status-test \
-        python3 run_tests.py --examples > test-results/integration-tests.log 2>&1; then
+    if timeout 120 podman run --rm 
+        -v $(pwd)/test-results:/app/test-results 
+        -v $(pwd)/config.json:/app/config.json 
+        -e TESTING=1 
+        redhat-status-test 
+        python3 -m redhat_status.main > test-results/integration-tests.log 2>&1; then
         print_success "Integration tests passed"
         return 0
     else
@@ -275,8 +274,8 @@ main() {
                 exit 0
                 ;;
             *)
-                echo "Unknown option: $1"
-                echo "Use --help for usage information"
+                echo "Unknown option: $1" >&2
+                echo "Use --help for usage information" >&2
                 exit 1
                 ;;
         esac
