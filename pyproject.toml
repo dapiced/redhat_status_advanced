@@ -7,7 +7,7 @@ name = "redhat_status"
 version = "3.1.0"
 description = "A comprehensive, enterprise-grade Python monitoring solution for Red Hat services."
 readme = "README.md"
-requires-python = ">=3.6"
+requires-python = ">=3.8"
 license = { file = "LICENSE" }
 keywords = ["redhat", "status", "monitoring", "api"]
 authors = [

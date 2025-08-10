@@ -4,6 +4,12 @@ urllib3>=1.26.0
 prometheus-client>=0.14.0
 Flask>=2.0.0
 
+# Note: sqlite3 module is built into Python 3.x
+# However, the sqlite3 command-line tool may need to be installed separately:
+# Ubuntu/Debian: sudo apt install sqlite3
+# RHEL/CentOS/Fedora: sudo dnf install sqlite
+# macOS: brew install sqlite3
+
 # Testing dependencies
 pytest>=7.0.0
 pytest-cov>=4.0.0

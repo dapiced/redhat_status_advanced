@@ -338,9 +338,9 @@ class DatabaseManager:
         try:
             with self.lock:
                 with self._get_connection() as conn:
-                    # Insert snapshot record
+                    # Insert snapshot record (replace if timestamp conflict exists)
                     cursor = conn.execute('''
-                        INSERT INTO service_snapshots 
+                        INSERT OR REPLACE INTO service_snapshots 
                         (page_name, page_url, overall_status, status_indicator, 
                          last_updated, total_services, operational_services, 
                          availability_percentage, metadata)
@@ -362,17 +362,17 @@ class DatabaseManager:
                     # Insert individual service statuses
                     for service in service_data:
                         conn.execute('''
-                            INSERT INTO service_statuses 
-                            (snapshot_id, service_name, status, created_at,
-                             updated_at, description, metadata)
+                            INSERT INTO service_metrics 
+                            (snapshot_id, service_name, service_id, status, 
+                             response_time, availability_score, metadata)
                             VALUES (?, ?, ?, ?, ?, ?, ?)
                         ''', (
                             snapshot_id,
                             service.get('name', ''),
+                            service.get('id', ''),
                             service.get('status', 'unknown'),
-                            service.get('created_at'),
-                            service.get('updated_at'),
-                            service.get('description', ''),
+                            None,  # response_time not available from status page
+                            100.0 if service.get('status') == 'operational' else 0.0,
                             json.dumps(service)
                         ))
                     

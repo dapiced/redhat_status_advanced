@@ -24,19 +24,19 @@ class TestNotificationManager:
         """Set up test method"""
         self.email_config = {
             'enabled': True,
-            'smtp_server': 'smtp.example.com',
+            'smtp_server': 'smtp.gmail.com',
             'smtp_port': 587,
-            'username': 'test@example.com',
-            'password': 'test_password',
-            'recipients': ['admin@example.com', 'ops@example.com'],
+            'username': 'monitoring@mycompany.com',
+            'password': 'secure_app_password_123',
+            'recipients': ['admin@mycompany.com', 'ops@mycompany.com'],
             'use_tls': True
         }
         
         self.webhook_config = {
             'enabled': True,
             'urls': [
-                'https://hooks.slack.com/services/test',
-                'https://discord.com/api/webhooks/test'
+                'https://hooks.slack.com/services/T123456/B123456/abcdef123456789',
+                'https://discord.com/api/webhooks/123456789/abcdef-webhook-token-12345'
             ],
             'timeout': 30
         }
@@ -377,11 +377,11 @@ class TestNotificationConfiguration:
         valid_config = {
             'email': {
                 'enabled': True,
-                'smtp_server': 'smtp.example.com',
+                'smtp_server': 'smtp.gmail.com',
                 'smtp_port': 587,
-                'username': 'test@example.com',
-                'password': 'password',
-                'recipients': ['admin@example.com']
+                'username': 'monitoring@mycompany.com',
+                'password': 'secure_password_123',
+                'recipients': ['admin@mycompany.com']
             },
             'webhooks': {'enabled': False}
         }
@@ -472,14 +472,14 @@ class TestNotificationSecurity:
         config = {
             'email': {
                 'enabled': True,
-                'smtp_server': 'smtp.example.com',
+                'smtp_server': 'smtp.gmail.com',
                 'smtp_port': 587,
-                'username': 'test@example.com',
-                'password': 'password',
+                'username': 'monitoring@mycompany.com',
+                'password': 'secure_password_123',
                 'recipients': [
-                    'valid@example.com',
+                    'valid@mycompany.com',
                     'invalid-email',  # Invalid email format
-                    'another@valid.com'
+                    'another@valid-domain.com'
                 ]
             }
         }
@@ -488,8 +488,8 @@ class TestNotificationSecurity:
         
         # Should filter out invalid email addresses
         valid_recipients = manager._validate_email_recipients(config['email']['recipients'])
-        assert 'valid@example.com' in valid_recipients
-        assert 'another@valid.com' in valid_recipients
+        assert 'valid@mycompany.com' in valid_recipients
+        assert 'another@valid-domain.com' in valid_recipients
         assert 'invalid-email' not in valid_recipients
 
 
@@ -501,15 +501,15 @@ class TestNotificationDelivery:
         self.config = {
             'email': {
                 'enabled': True,
-                'smtp_server': 'smtp.example.com',
+                'smtp_server': 'smtp.gmail.com',
                 'smtp_port': 587,
-                'username': 'test@example.com',
-                'password': 'password',
-                'recipients': ['admin@example.com']
+                'username': 'monitoring@mycompany.com',
+                'password': 'secure_password_123',
+                'recipients': ['admin@mycompany.com']
             },
             'webhooks': {
                 'enabled': True,
-                'urls': ['https://hooks.slack.com/test'],
+                'urls': ['https://hooks.slack.com/services/T123456/B123456/webhook-token-12345'],
                 'timeout': 30
             }
         }

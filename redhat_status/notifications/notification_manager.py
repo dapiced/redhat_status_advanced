@@ -70,7 +70,7 @@ class EmailNotificationChannel(NotificationChannel):
         # Email settings
         self.from_email = config.get('from_email', 'redhat-status@localhost')
         self.from_name = config.get('from_name', 'Red Hat Status Checker')
-        self.recipients = config.get('recipients', [])
+        self.recipients = config.get('recipients', []) or config.get('to_addresses', [])
         
         # Message settings
         self.subject_template = config.get('subject_template', '[{severity}] Red Hat Alert: {title}')
@@ -568,10 +568,19 @@ class NotificationManager:
         if self._email_config.get('enabled', False):
             # Check required fields
             smtp_server = self._email_config.get('smtp_server', '')
-            recipients = self._email_config.get('recipients', [])
+            recipients = self._email_config.get('recipients', []) or self._email_config.get('to_addresses', [])
             
-            if not smtp_server or not recipients:
-                self.logger.warning("Email configuration invalid: missing smtp_server or recipients. Disabling email notifications.")
+            # Check for placeholder/test values that indicate incomplete configuration
+            is_placeholder_config = (
+                not smtp_server or 
+                not recipients or
+                smtp_server == 'localhost' or
+                any('example.com' in str(email) for email in recipients) or
+                any('test@' in str(email) for email in recipients)
+            )
+            
+            if is_placeholder_config:
+                self.logger.info("Email notifications disabled: configuration contains placeholder/test values. Set valid SMTP server and recipient addresses to enable.")
                 self._email_config['enabled'] = False
         
         # Validate webhook configuration

@@ -57,6 +57,16 @@ class AIAnalytics:
         self.db_path = db_path or self._get_config_value('analytics', 'database_path', 'redhat_analytics.db')
         self.lock = threading.Lock()
         self.logger = logging.getLogger(__name__)
+        
+        # Initialize analytics configuration parameters
+        self.learning_window = self._get_config_value('ai_analytics', 'learning_window', 50)
+        
+        # Initialize database
+        self._init_database()
+        
+        # Cache for performance
+        self._service_baselines = {}
+        self._recent_anomalies = []
 
     def _get_config_value(self, section: str, key: str, default: Any = None) -> Any:
         """Helper to get configuration values from either dict or ConfigManager"""
@@ -68,13 +78,6 @@ class AIAnalytics:
             if isinstance(self.config, dict):
                 return self.config.get(key, default)
             return default
-        
-        # Initialize database
-        self._init_database()
-        
-        # Cache for performance
-        self._service_baselines = {}
-        self._recent_anomalies = []
         
     @property
     def enabled(self) -> bool:

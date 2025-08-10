@@ -5,6 +5,81 @@ All notable changes to Red Hat Status Checker will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [3.1.2] - 2025-08-09
+
+### Fixed - Critical Database and CLI Issues Resolution
+- **🛠️ Database Operations Stability**
+  - Fixed UNIQUE constraint errors in "quick" mode database operations
+  - Implemented `INSERT OR REPLACE` strategy for conflict resolution
+  - Corrected table references from `service_statuses` to `service_metrics`
+  - Enhanced database error handling and recovery mechanisms
+
+- **🔧 AI Analytics Module Initialization**
+  - Fixed missing `learning_window` attribute error in AI analytics
+  - Corrected configuration parameter initialization in AIAnalytics class
+  - Improved error handling for analytics configuration loading
+  - Enhanced AI analytics module stability and reliability
+
+- **📧 Notification System Improvements**
+  - Enhanced email configuration validation with intelligent placeholder detection
+  - Improved warning messages for invalid email configurations
+  - Added support for both `recipients` and `to_addresses` configuration formats
+  - Better user guidance for notification system setup
+
+- **📄 Export Functionality Corrections**
+  - Fixed text export formatting with proper escape sequence handling
+  - Corrected newline character rendering in exported `.txt` files
+  - Enhanced export file readability and formatting consistency
+  - Improved error handling for export operations
+
+### Enhanced - CLI Feature Implementation
+- **🚀 Advanced CLI Flags Full Implementation**
+  - Transformed `--ai-insights` from placeholder to fully functional AI analysis
+  - Implemented complete `--health-report` with comprehensive system health checks
+  - Added functional `--benchmark` with performance analysis and metrics
+  - Enhanced `--trends` with detailed trend analysis and reporting
+  - Activated `--anomaly-analysis` with statistical anomaly detection
+  - All CLI flags now provide real functionality instead of placeholder messages
+
+- **📊 Analytics and Reporting Features**
+  - AI insights now provide statistical analysis with confidence scores
+  - Health reports include comprehensive system health grading (A+ to F)
+  - Benchmark reports show performance metrics and historical comparisons
+  - Trend analysis includes linear regression and pattern recognition
+  - Anomaly detection uses Z-score analysis with configurable thresholds
+
+### Updated - Documentation and Requirements
+- **📚 Comprehensive Documentation Updates**
+  - Added detailed CLI flags documentation to README.md
+  - Enhanced troubleshooting section with common issues and solutions
+  - Updated system requirements documentation for SQLite3 dependencies
+  - Added comprehensive examples for all new CLI features
+  - Improved installation and setup instructions
+
+- **⚙️ System Requirements Clarification**
+  - Updated Python version requirement to 3.8+ for consistency across all files
+  - Clarified SQLite3 system package requirements in addition to Python module
+  - Enhanced Docker configuration with proper SQLite3 dependencies
+  - Updated pyproject.toml with correct version requirements
+  - Added troubleshooting guidance for SQLite3 installation issues
+
+### Technical Improvements
+- **🔍 Code Quality and Reliability**
+  - Enhanced error handling across all modules
+  - Improved logging and debugging capabilities
+  - Better configuration validation and user feedback
+  - Increased system stability and reliability
+  - Professional error messages and user guidance
+
+### Validated - System Functionality
+- **✅ Complete Feature Testing**
+  - All database operations now work correctly in all modes
+  - Email notification system validates configurations properly
+  - Export functionality produces correctly formatted output files
+  - All CLI flags provide functional features with real output
+  - AI analytics module operates without initialization errors
+  - System requirements properly documented and verified
+
 ## [3.1.1] - 2025-08-06
 
 ### Added - Docker Testing Infrastructure & Permission Management

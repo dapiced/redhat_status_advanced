@@ -12,7 +12,8 @@ A comprehensive, enterprise-grade Python monitoring solution for Red Hat service
 - [🏆 Red Hat Enterprise Integration](#-red-hat-enterprise-integration)
   - [OpenShift Operator](#openshift-operator)
   - [Prometheus Exporter](#prometheus-exporter)
-- [🚀 Quick Start](#-quick-start)
+- [� System Requirements](#-system-requirements)
+- [�🚀 Quick Start](#-quick-start)
 - [📊 Core Features](#-core-features)
 - [🏭 Enterprise Features](#-enterprise-features)
   - [Statistical Analysis and Forecasting](#statistical-analysis-and-forecasting)
@@ -22,6 +23,7 @@ A comprehensive, enterprise-grade Python monitoring solution for Red Hat service
 - [🧪 Testing Infrastructure](#-testing-infrastructure)
 - [⚙️ Configuration](#️-configuration)
 - [📋 Command Line Interface](#-command-line-interface)
+- [🔧 Troubleshooting](#-troubleshooting)
 
 ---
 
@@ -118,7 +120,45 @@ The built-in Prometheus exporter allows for seamless integration with **OpenShif
 
 ---
 
-## 🚀 Quick Start
+## � System Requirements
+
+### Python Requirements
+- **Python 3.8 or higher** (tested with 3.8, 3.9, 3.10, 3.11, 3.12)
+- **pip package manager**
+
+### System Dependencies
+- **SQLite3**: Required for database operations and command-line database tools
+  ```bash
+  # Ubuntu/Debian
+  sudo apt update
+  sudo apt install sqlite3
+  
+  # RHEL/CentOS/Fedora
+  sudo dnf install sqlite
+  
+  # macOS
+  brew install sqlite3
+  ```
+
+### Python Dependencies
+All Python dependencies are automatically managed through `requirements.txt`:
+
+**Core Dependencies:**
+- `requests>=2.25.0` - HTTP API client
+- `urllib3>=1.26.0` - HTTP connection pooling  
+- `prometheus-client>=0.14.0` - Metrics export
+- `Flask>=2.0.0` - Web UI framework
+
+**Testing Dependencies:**
+- `pytest>=7.0.0` - Test framework
+- `numpy>=1.20.0` - Statistical analysis
+- `pytest-cov>=4.0.0` - Test coverage
+
+**Note**: All built-in Python modules (`sqlite3`, `json`, `logging`, etc.) are included with Python 3.8+.
+
+---
+
+## �🚀 Quick Start
 
 1.  **Clone the repository**:
     ```bash
@@ -352,6 +392,13 @@ The application provides a rich CLI for scripting and automation.
 - `--enable-exporter`: Run the Prometheus exporter.
 - `--web`: Run the Flask web UI.
 
+**Advanced Analytics Flags:**
+- `--ai-insights`: AI-powered health analysis and anomaly detection.
+- `--health-report`: Comprehensive health report with statistics.
+- `--trends`: Historical availability trends and analysis.
+- `--anomaly-analysis`: Focused anomaly detection analysis.
+- `--benchmark`: Performance benchmark tests for system components.
+
 For a full list of commands, run `python3 redhat_status.py --help`.
 
 ### 🧪 Testing Commands
@@ -379,3 +426,57 @@ python -m pytest tests/test_ai_analytics.py -v
 # Container testing
 ./test-docker.sh --help  # See all options
 ```
+
+---
+
+## 🔧 Troubleshooting
+
+### Common Issues and Solutions
+
+#### Database Issues
+- **Error: "no such table: service_statuses"**
+  - This has been fixed in the current version
+  - If you encounter this, ensure you're using the latest code
+
+- **Error: "UNIQUE constraint failed: service_snapshots.timestamp"**
+  - This occurs when running the application multiple times per second
+  - Fixed with `INSERT OR REPLACE` logic in the current version
+
+#### SQLite Issues
+- **Error: "sqlite3 command not found"**
+  ```bash
+  # Ubuntu/Debian
+  sudo apt install sqlite3
+  
+  # RHEL/CentOS/Fedora
+  sudo dnf install sqlite
+  
+  # macOS
+  brew install sqlite3
+  ```
+
+#### Email Notification Warnings
+- **Warning: "Email configuration invalid"**
+  - This is expected with default configuration
+  - Configure valid SMTP settings in `config.json` to enable email notifications
+  - The warning has been reduced to INFO level and won't appear during normal operation
+
+#### AI Analytics Issues
+- **Error: "Insufficient data for predictions"**
+  - This is normal when the application is first run
+  - Run `quick` or `simple` mode several times to collect baseline data
+  - Historical data is required for trend analysis and anomaly detection
+
+#### Performance Issues
+- **Slow database operations**
+  - Ensure SQLite database file isn't on a network filesystem
+  - Check disk space and I/O performance
+  - Database is automatically optimized with indexes
+
+### Getting Help
+- Check the logs in `redhat_status.log`
+- Run with `--benchmark` to test system performance
+- Use `--health-report` to check overall system status
+- Review configuration in `config.json` for customization options
+
+---
