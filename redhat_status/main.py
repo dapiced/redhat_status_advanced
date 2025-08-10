@@ -31,7 +31,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 # Import our modular components
 from redhat_status.config.config_manager import get_config
 from redhat_status.core.api_client import get_api_client, fetch_status_data
-from redhat_status.core.data_models import PerformanceMetrics
+from redhat_status.core.data_models import PerformanceMetrics, AlertSeverity
 from redhat_status.utils.decorators import performance_monitor, Timer
 from redhat_status.presentation.presenter import Presenter
 
@@ -248,22 +248,22 @@ class RedHatStatusChecker:
             health_metrics = self.api_client.get_service_health_metrics(data)
             
             with open(summary_filename, 'w', encoding='utf-8') as f:
-                f.write("RED HAT STATUS SUMMARY REPORT\\n")
-                f.write("=" * 50 + "\\n\\n")
+                f.write("RED HAT STATUS SUMMARY REPORT\n")
+                f.write("=" * 50 + "\n\n")
                 
-                f.write(f"Page: {health_metrics['page_name']}\\n")
-                f.write(f"URL: {health_metrics['page_url']}\\n")
-                f.write(f"Last Update: {health_metrics['last_updated']}\\n\\n")
+                f.write(f"Page: {health_metrics['page_name']}\n")
+                f.write(f"URL: {health_metrics['page_url']}\n")
+                f.write(f"Last Update: {health_metrics['last_updated']}\n\n")
                 
-                f.write(f"Status: {health_metrics['overall_status']}\\n")
-                f.write(f"Indicator: {health_metrics['status_indicator']}\\n\\n")
+                f.write(f"Status: {health_metrics['overall_status']}\n")
+                f.write(f"Indicator: {health_metrics['status_indicator']}\n\n")
                 
-                f.write(f"Global Availability: {health_metrics['availability_percentage']:.1f}%\\n")
-                f.write(f"Total Services: {health_metrics['total_services']}\\n")
-                f.write(f"Operational: {health_metrics['operational_services']}\\n")
-                f.write(f"With Issues: {health_metrics['services_with_issues']}\\n\\n")
+                f.write(f"Global Availability: {health_metrics['availability_percentage']:.1f}%\n")
+                f.write(f"Total Services: {health_metrics['total_services']}\n")
+                f.write(f"Operational: {health_metrics['operational_services']}\n")
+                f.write(f"With Issues: {health_metrics['services_with_issues']}\n\n")
                 
-                f.write(f"Report generated: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\\n")
+                f.write(f"Report generated: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n")
             
             self.presenter.present_message(f"📋 Summary report created: {summary_filename}")
             
@@ -852,20 +852,270 @@ def handle_db_maintenance(app, args):
     app.presenter.present_message(f"  Analyze: {'✅ Success' if analyze_success else '❌ Failed'}")
 
 def handle_ai_insights(app, args):
-    # This and other handlers would be implemented similarly
-    app.presenter.present_message("🤖 AI Insights handler not fully implemented in this refactoring.")
+    """Show AI-powered insights and analytics"""
+    app.presenter.present_message("\n🤖 AI INSIGHTS & ANALYTICS")
+    app.presenter.present_message("=" * 40)
+    
+    try:
+        from redhat_status.analytics.ai_analytics import AIAnalytics
+        
+        # Get current data for analysis
+        response = fetch_status_data()
+        if not response.success:
+            app.presenter.present_error(f"Failed to fetch data: {response.error_message}")
+            return
+        
+        data = response.data
+        ai_analytics = AIAnalytics()
+        
+        # Get recent anomalies using historical data
+        app.presenter.present_message("\n🔍 Anomaly Analysis:")
+        try:
+            # Try to get historical data for anomaly detection
+            if hasattr(app, 'db_manager') and app.db_manager.is_enabled():
+                historical_data = app.db_manager.get_status_history(limit=50)
+                if historical_data:
+                    anomalies = ai_analytics.detect_anomalies(historical_data)
+                    if isinstance(anomalies, list) and anomalies:
+                        for anomaly in anomalies[:5]:  # Show top 5
+                            severity_emoji = "🔴" if anomaly.severity == AlertSeverity.CRITICAL else "🟡" if anomaly.severity == AlertSeverity.WARNING else "🔵"
+                            app.presenter.present_message(f"  {severity_emoji} {anomaly.service_name}: {anomaly.description}")
+                    else:
+                        app.presenter.present_message("  ✅ No significant anomalies detected")
+                else:
+                    app.presenter.present_message("  ℹ️ Insufficient historical data for anomaly detection")
+            else:
+                app.presenter.present_message("  ⚠️ Database not available for anomaly analysis")
+        except Exception as e:
+            app.presenter.present_message(f"  ⚠️ Anomaly detection failed: {e}")
+        
+        # Get current health insights
+        app.presenter.present_message("\n💡 Current Health Analysis:")
+        try:
+            health_metrics = app.api_client.get_service_health_metrics(data)
+            
+            # Generate health score
+            health_score_data = ai_analytics.generate_health_score(data)
+            if health_score_data:
+                app.presenter.present_message(f"  📊 Health Score: {health_score_data}")
+            
+            # Provide basic health analysis
+            availability = health_metrics.get('availability_percentage', 0)
+            if availability >= 99.0:
+                app.presenter.present_message("  ✅ Excellent health: All systems operating normally")
+            elif availability >= 95.0:
+                app.presenter.present_message("  🟡 Good health: Minor issues detected")
+            else:
+                app.presenter.present_message("  🔴 Health concern: Significant service disruptions")
+                
+            # Try to generate predictions for main services
+            app.presenter.present_message("\n🔮 Predictive Analysis:")
+            try:
+                predictions = ai_analytics.generate_predictions("Red Hat", hours_ahead=24)
+                if predictions:
+                    for prediction in predictions[:2]:  # Show top 2
+                        app.presenter.present_message(f"  📈 {prediction.title}: {prediction.description}")
+                else:
+                    app.presenter.present_message("  ℹ️ Insufficient data for predictions")
+            except Exception as e:
+                app.presenter.present_message(f"  ⚠️ Prediction analysis failed: {e}")
+                
+        except Exception as e:
+            app.presenter.present_message(f"  ⚠️ Health analysis failed: {e}")
+            
+    except Exception as e:
+        app.presenter.present_error(f"Error generating AI insights: {e}")
 
 def handle_anomaly_analysis(app, args):
-    app.presenter.present_message("🔍 Anomaly Analysis handler not fully implemented in this refactoring.")
+    """Run focused anomaly detection analysis"""
+    app.presenter.present_message("\n🔍 ANOMALY DETECTION ANALYSIS")
+    app.presenter.present_message("=" * 45)
+    
+    try:
+        from redhat_status.analytics.ai_analytics import AIAnalytics
+        
+        if not hasattr(app, 'db_manager') or not app.db_manager.is_enabled():
+            app.presenter.present_message("❌ Database not available for anomaly analysis")
+            app.presenter.present_message("💡 Run the application with normal modes first to collect data")
+            return
+        
+        ai_analytics = AIAnalytics()
+        
+        # Get historical data for analysis
+        app.presenter.present_message("\n📊 Collecting Historical Data...")
+        historical_data = app.db_manager.get_status_history(limit=100)
+        
+        if not historical_data:
+            app.presenter.present_message("  ⚠️ No historical data available")
+            app.presenter.present_message("  💡 Run 'quick' or 'simple' mode a few times to collect baseline data")
+            return
+        
+        app.presenter.present_message(f"  ✅ Analyzing {len(historical_data)} data points")
+        
+        # Perform anomaly detection
+        app.presenter.present_message("\n🔍 Running Anomaly Detection...")
+        try:
+            anomalies = ai_analytics.detect_anomalies(historical_data)
+            
+            if isinstance(anomalies, dict):
+                # Handle dictionary response
+                anomaly_count = anomalies.get('anomaly_count', 0)
+                if anomaly_count > 0:
+                    app.presenter.present_message(f"  🚨 Found {anomaly_count} anomalies")
+                    
+                    # Show anomaly details if available
+                    if 'anomalies' in anomalies:
+                        for i, anomaly in enumerate(anomalies['anomalies'][:5]):
+                            app.presenter.present_message(f"  {i+1}. {anomaly}")
+                else:
+                    app.presenter.present_message("  ✅ No anomalies detected - system appears stable")
+                    
+                # Show statistical summary if available
+                if 'statistics' in anomalies:
+                    stats = anomalies['statistics']
+                    app.presenter.present_message(f"\n📈 Statistical Summary:")
+                    for key, value in stats.items():
+                        app.presenter.present_message(f"  • {key}: {value}")
+                        
+            elif isinstance(anomalies, list):
+                # Handle list response
+                if anomalies:
+                    app.presenter.present_message(f"  🚨 Found {len(anomalies)} anomalies")
+                    for i, anomaly in enumerate(anomalies[:5]):
+                        severity_emoji = "🔴" if hasattr(anomaly, 'severity') and anomaly.severity == AlertSeverity.CRITICAL else "🟡"
+                        service_name = getattr(anomaly, 'service_name', 'Unknown')
+                        description = getattr(anomaly, 'description', 'No description')
+                        app.presenter.present_message(f"  {severity_emoji} {service_name}: {description}")
+                else:
+                    app.presenter.present_message("  ✅ No anomalies detected - system appears stable")
+            else:
+                app.presenter.present_message("  ℹ️ Anomaly analysis completed (no structured results)")
+                
+        except Exception as e:
+            app.presenter.present_message(f"  ❌ Anomaly detection failed: {e}")
+        
+        # Provide recommendations
+        app.presenter.present_message("\n💡 Recommendations:")
+        app.presenter.present_message("  • Continue monitoring for pattern establishment")
+        app.presenter.present_message("  • Set up alerts for critical anomalies")
+        app.presenter.present_message("  • Review historical trends weekly")
+        
+    except Exception as e:
+        app.presenter.present_error(f"Error running anomaly analysis: {e}")
 
 def handle_health_report(app, args):
-    app.presenter.present_message("🏥 Health Report handler not fully implemented in this refactoring.")
+    """Generate comprehensive health report"""
+    app.presenter.present_message("\n🏥 COMPREHENSIVE HEALTH REPORT")
+    app.presenter.present_message("=" * 50)
+    
+    try:
+        # Get current status
+        response = fetch_status_data()
+        if not response.success:
+            app.presenter.present_error(f"Failed to fetch data: {response.error_message}")
+            return
+        
+        data = response.data
+        health_metrics = app.api_client.get_service_health_metrics(data)
+        
+        # Overall Health Score
+        app.presenter.present_message(f"\n📊 Overall Health Score: {health_metrics['availability_percentage']:.1f}%")
+        
+        # Service breakdown
+        app.presenter.present_message(f"\n📈 Service Statistics:")
+        app.presenter.present_message(f"  • Total Services: {health_metrics['total_services']}")
+        app.presenter.present_message(f"  • Operational: {health_metrics['operational_services']}")
+        app.presenter.present_message(f"  • With Issues: {health_metrics['services_with_issues']}")
+        
+        # Performance metrics if available
+        if hasattr(app, 'db_manager') and app.db_manager.is_enabled():
+            try:
+                recent_snapshots = app.db_manager.get_status_history(limit=5)
+                if recent_snapshots:
+                    app.presenter.present_message(f"\n📊 Recent Status History:")
+                    for snapshot in recent_snapshots:
+                        timestamp = snapshot.get('timestamp', 'Unknown')
+                        availability = snapshot.get('availability_percentage', 0)
+                        app.presenter.present_message(f"  • {timestamp}: {availability:.1f}%")
+            except Exception as e:
+                app.presenter.present_message(f"  ⚠️ Historical data unavailable: {e}")
+        
+        # Current status details
+        app.presenter.present_message(f"\n🎯 Current Status:")
+        app.presenter.present_message(f"  • Page: {health_metrics['page_name']}")
+        app.presenter.present_message(f"  • Last Updated: {health_metrics['last_updated']}")
+        app.presenter.present_message(f"  • Status: {health_metrics['overall_status']}")
+        
+    except Exception as e:
+        app.presenter.present_error(f"Error generating health report: {e}")
 
 def handle_insights(app, args):
     app.presenter.present_message("💡 Insights handler not fully implemented in this refactoring.")
 
 def handle_trends(app, args):
-    app.presenter.present_message("📈 Trends handler not fully implemented in this refactoring.")
+    """Show availability trends and historical data"""
+    app.presenter.present_message("\n📈 AVAILABILITY TRENDS")
+    app.presenter.present_message("=" * 40)
+    
+    try:
+        if not hasattr(app, 'db_manager') or not app.db_manager.is_enabled():
+            app.presenter.present_message("❌ Database not available for trend analysis")
+            return
+        
+        # Get historical data
+        app.presenter.present_message("\n📊 Recent Status History:")
+        recent_snapshots = app.db_manager.get_status_history(limit=10)
+        
+        if not recent_snapshots:
+            app.presenter.present_message("  ℹ️ No historical data available")
+            return
+        
+        # Display trend data
+        total_availability = 0
+        for i, snapshot in enumerate(recent_snapshots):
+            timestamp = snapshot.get('timestamp', 'Unknown')
+            availability = snapshot.get('availability_percentage', 0)
+            total_services = snapshot.get('total_services', 0)
+            operational = snapshot.get('operational_services', 0)
+            
+            # Format timestamp for display
+            try:
+                if isinstance(timestamp, str):
+                    dt = datetime.fromisoformat(timestamp.replace('Z', '+00:00'))
+                    time_str = dt.strftime('%H:%M:%S')
+                else:
+                    time_str = str(timestamp)
+            except:
+                time_str = str(timestamp)
+            
+            status_emoji = "🟢" if availability >= 99.0 else "🟡" if availability >= 95.0 else "🔴"
+            app.presenter.present_message(f"  {status_emoji} {time_str}: {availability:.1f}% ({operational}/{total_services})")
+            total_availability += availability
+        
+        # Calculate average
+        avg_availability = total_availability / len(recent_snapshots)
+        app.presenter.present_message(f"\n📊 Average Availability (24h): {avg_availability:.1f}%")
+        
+        # Trend analysis
+        if len(recent_snapshots) >= 2:
+            latest = recent_snapshots[0].get('availability_percentage', 0)
+            oldest = recent_snapshots[-1].get('availability_percentage', 0)
+            trend = latest - oldest
+            
+            if abs(trend) < 0.1:
+                trend_emoji = "➡️"
+                trend_desc = "Stable"
+            elif trend > 0:
+                trend_emoji = "📈"
+                trend_desc = f"Improving (+{trend:.1f}%)"
+            else:
+                trend_emoji = "📉"
+                trend_desc = f"Declining ({trend:.1f}%)"
+            
+            app.presenter.present_message(f"🎯 Trend: {trend_emoji} {trend_desc}")
+        
+    except Exception as e:
+        app.presenter.present_error(f"Error analyzing trends: {e}")
 
 def handle_slo_dashboard(app, args):
     app.presenter.present_message("📊 SLO Dashboard handler not fully implemented in this refactoring.")
@@ -895,7 +1145,82 @@ def handle_notify(app, args):
     app.presenter.present_message("📢 Notify handler not fully implemented in this refactoring.")
 
 def handle_benchmark(app, args):
-    app.presenter.present_message("🏁 Benchmark handler not fully implemented in this refactoring.")
+    """Run performance benchmark tests"""
+    app.presenter.present_message("\n🏁 PERFORMANCE BENCHMARK")
+    app.presenter.present_message("=" * 40)
+    
+    try:
+        import time
+        
+        # Test API response time
+        app.presenter.present_message("\n🌐 API Response Time Test:")
+        
+        for i in range(3):
+            start_time = time.time()
+            response = fetch_status_data()
+            duration = time.time() - start_time
+            
+            if response.success:
+                status_emoji = "✅"
+                result = f"Success ({duration:.3f}s)"
+            else:
+                status_emoji = "❌"
+                result = f"Failed ({duration:.3f}s)"
+            
+            app.presenter.present_message(f"  Test {i+1}: {status_emoji} {result}")
+        
+        # Test database operations if available
+        if hasattr(app, 'db_manager') and app.db_manager.is_enabled():
+            app.presenter.present_message("\n💾 Database Performance Test:")
+            
+            # Test write operation
+            start_time = time.time()
+            try:
+                test_data = {
+                    'page_name': 'Benchmark Test',
+                    'overall_status': 'test',
+                    'total_services': 0,
+                    'operational_services': 0,
+                    'availability_percentage': 100.0
+                }
+                app.db_manager.save_service_snapshot(test_data, [])
+                write_time = time.time() - start_time
+                app.presenter.present_message(f"  Write Test: ✅ Success ({write_time:.3f}s)")
+            except Exception as e:
+                write_time = time.time() - start_time
+                app.presenter.present_message(f"  Write Test: ❌ Failed ({write_time:.3f}s) - {e}")
+            
+            # Test read operation
+            start_time = time.time()
+            try:
+                snapshots = app.db_manager.get_status_history(limit=5)
+                read_time = time.time() - start_time
+                app.presenter.present_message(f"  Read Test: ✅ Success ({read_time:.3f}s) - {len(snapshots)} records")
+            except Exception as e:
+                read_time = time.time() - start_time
+                app.presenter.present_message(f"  Read Test: ❌ Failed ({read_time:.3f}s) - {e}")
+        
+        # Test module imports
+        app.presenter.present_message("\n📦 Module Import Test:")
+        modules_to_test = [
+            'redhat_status.core.api_client',
+            'redhat_status.analytics.ai_analytics',
+            'redhat_status.notifications.notification_manager',
+            'redhat_status.presentation.presenter'
+        ]
+        
+        for module_name in modules_to_test:
+            start_time = time.time()
+            try:
+                __import__(module_name)
+                import_time = time.time() - start_time
+                app.presenter.present_message(f"  {module_name}: ✅ Success ({import_time:.3f}s)")
+            except Exception as e:
+                import_time = time.time() - start_time
+                app.presenter.present_message(f"  {module_name}: ❌ Failed ({import_time:.3f}s) - {e}")
+        
+    except Exception as e:
+        app.presenter.present_error(f"Error running benchmark: {e}")
 
 def handle_setup(app, args):
     app.presenter.present_message("⚙️ Setup handler not fully implemented in this refactoring.")

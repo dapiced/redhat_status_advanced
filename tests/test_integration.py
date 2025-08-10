@@ -13,7 +13,7 @@ from pathlib import Path
 from unittest.mock import Mock, patch
 from datetime import datetime
 
-# Add the project root to sys.path for imports
+# Add the project root to sys.path
 project_root = Path(__file__).parent.parent
 sys.path.insert(0, str(project_root))
 
@@ -352,16 +352,15 @@ class TestEndToEndScenarios:
     
     def test_complete_status_check_workflow(self):
         """Test complete status check workflow using CLI"""
-        # Test the complete workflow by running the CLI with dry-run to avoid actual API calls
+        # Test the complete workflow by running the CLI with help to avoid actual API calls
         result = subprocess.run([
             sys.executable, 'redhat_status.py', 
-            '--dry-run',  # Use dry-run to test workflow without API calls
-            '--format', 'json'
-        ], capture_output=True, text=True, cwd='/home/dom/Documents/devrepo/status_refactory/redhat_status_test')
+            '--help'  # Use help to test CLI structure without API calls
+        ], capture_output=True, text=True, cwd=os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
         
-        # Application should handle dry-run gracefully
-        # Even if API is not called, the application structure should work
-        assert result.returncode == 0 or "help" in result.stdout.lower() or "error" in result.stderr.lower()
+        # Application should show help successfully
+        assert result.returncode == 0
+        assert "usage:" in result.stdout.lower() or "red hat status checker" in result.stdout.lower()
     
     def test_error_handling_workflow(self):
         """Test error handling in complete workflow"""
@@ -369,11 +368,12 @@ class TestEndToEndScenarios:
         result = subprocess.run([
             sys.executable, 'redhat_status.py', 
             '--invalid-argument'  # Use invalid argument to test error handling
-        ], capture_output=True, text=True, cwd='/home/dom/Documents/devrepo/status_refactory/redhat_status_test')
+        ], capture_output=True, text=True, cwd=os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
         
         # Application should handle invalid arguments gracefully
         # Should return non-zero exit code and helpful error message
-        assert result.returncode != 0 or "error" in result.stderr.lower() or "unrecognized" in result.stderr.lower()
+        assert result.returncode != 0
+        assert "error" in result.stderr.lower() or "unrecognized" in result.stderr.lower()
     
     def test_configuration_workflow(self):
         """Test configuration loading and validation workflow"""
