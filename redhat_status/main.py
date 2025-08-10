@@ -1118,7 +1118,133 @@ def handle_trends(app, args):
         app.presenter.present_error(f"Error analyzing trends: {e}")
 
 def handle_slo_dashboard(app, args):
-    app.presenter.present_message("📊 SLO Dashboard handler not fully implemented in this refactoring.")
+    """Handle SLO dashboard display"""
+    try:
+        app.presenter.present_message("📊 SLO DASHBOARD")
+        app.presenter.present_message("=" * 60)
+        
+        # Get SLO configuration - check if we have direct access to config dict
+        if hasattr(app.config, 'config') and isinstance(app.config.config, dict):
+            slo_config = app.config.config.get('slo', {})
+        elif isinstance(app.config, dict):
+            slo_config = app.config.get('slo', {})
+        else:
+            # Try to get individual config values
+            slo_enabled = app._get_config_value('slo', 'enabled', False)
+            if slo_enabled is None:
+                slo_enabled = False
+            slo_config = {
+                'enabled': slo_enabled,
+                'targets': {
+                    'global_availability': 99.9,
+                    'response_time': 2.0,
+                    'uptime_monthly': 99.5
+                },
+                'tracking_period': 'monthly',
+                'alert_on_breach': True
+            }
+        
+        if not slo_config.get('enabled', False):
+            app.presenter.present_message("⚠️  SLO tracking is disabled in configuration")
+            return
+        
+        # Get SLO targets from config
+        slo_targets = slo_config.get('targets', {})
+        app.presenter.present_message(f"🎯 SLO TARGETS:")
+        for metric, target in slo_targets.items():
+            app.presenter.present_message(f"   • {metric.replace('_', ' ').title()}: {target}%")
+        
+        # Get current status data for analysis
+        app.presenter.present_message("\n📈 Fetching current service status...")
+        api_response = fetch_status_data(app.api_client)
+        
+        if not api_response.success or not api_response.data:
+            app.presenter.present_message("❌ Could not fetch status data for SLO analysis")
+            return
+        
+        status_data = api_response.data
+        
+        # Calculate current SLO metrics
+        total_services = len(status_data.get('components', []))
+        operational_services = len([c for c in status_data.get('components', []) 
+                                   if c.get('status') == 'operational'])
+        
+        if total_services > 0:
+            current_availability = (operational_services / total_services) * 100
+        else:
+            current_availability = 0
+        
+        app.presenter.present_message(f"\n📊 CURRENT SLO PERFORMANCE:")
+        app.presenter.present_message(f"   • Global Availability: {current_availability:.2f}%")
+        
+        # Check against targets
+        availability_target = slo_targets.get('global_availability', 99.9)
+        if current_availability >= availability_target:
+            status_emoji = "✅"
+            status_text = "MEETING TARGET"
+        else:
+            status_emoji = "❌"
+            status_text = "BELOW TARGET"
+            
+        app.presenter.present_message(f"   • Status: {status_emoji} {status_text} (Target: {availability_target}%)")
+        
+        # If analytics is available, get more detailed SLO analysis
+        if app.analytics:
+            app.presenter.present_message(f"\n🔍 DETAILED SLO ANALYSIS:")
+            
+            # Prepare data for SLO analysis
+            analysis_data = []
+            for component in status_data.get('components', []):
+                analysis_data.append({
+                    'name': component.get('name', 'Unknown'),
+                    'status': component.get('status', 'unknown'),
+                    'availability': 100.0 if component.get('status') == 'operational' else 0.0
+                })
+            
+            # Generate SLO analysis
+            slo_analysis = app.analytics.generate_slo_analysis(
+                analysis_data, 
+                availability_target
+            )
+            
+            if slo_analysis:
+                # Display SLO compliance
+                compliance = slo_analysis.get('slo_compliance', {})
+                for metric, value in compliance.items():
+                    target = slo_targets.get(metric, 99.0)
+                    status = "✅" if value >= target else "❌"
+                    app.presenter.present_message(f"   • {metric.replace('_', ' ').title()}: {value:.1f}% {status}")
+                
+                # Display breach analysis if available
+                breach_info = slo_analysis.get('breach_analysis', {})
+                if breach_info:
+                    app.presenter.present_message(f"\n⚠️  BREACH ANALYSIS:")
+                    app.presenter.present_message(f"   • Total Breaches: {breach_info.get('total_breaches', 0)}")
+                    app.presenter.present_message(f"   • Total Duration: {breach_info.get('breach_duration', 'N/A')}")
+                    app.presenter.present_message(f"   • Most Affected: {breach_info.get('most_affected_service', 'N/A')}")
+                
+                # Display recommendations
+                recommendations = slo_analysis.get('recommendations', [])
+                if recommendations:
+                    app.presenter.present_message(f"\n💡 RECOMMENDATIONS:")
+                    for i, rec in enumerate(recommendations, 1):
+                        app.presenter.present_message(f"   {i}. {rec}")
+        else:
+            app.presenter.present_message(f"\n💡 Enable AI analytics for detailed SLO analysis")
+        
+        # Display tracking period and alert settings
+        tracking_period = slo_config.get('tracking_period', 'monthly')
+        alert_on_breach = slo_config.get('alert_on_breach', False)
+        
+        app.presenter.present_message(f"\n⚙️  CONFIGURATION:")
+        app.presenter.present_message(f"   • Tracking Period: {tracking_period.title()}")
+        app.presenter.present_message(f"   • Alert on Breach: {'Enabled' if alert_on_breach else 'Disabled'}")
+        
+        app.presenter.present_message("\n" + "=" * 60)
+        
+    except Exception as e:
+        app.presenter.present_error(f"Error displaying SLO dashboard: {e}")
+        logging.error(f"SLO dashboard error: {e}", exc_info=True)
 
 def handle_export_ai_report(app, args):
     app.presenter.present_message("📊 Export AI Report handler not fully implemented in this refactoring.")
