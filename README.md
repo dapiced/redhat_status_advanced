@@ -102,21 +102,87 @@ The application uses `config.json` for configuration. Key sections:
 
 Example configuration structure:
 ```json
-{
+
   "api": {
-    "base_url": "https://status.redhat.com/api/v2",
-    "timeout": 30,
+    "base_url": "https://status.redhat.com/api/v2/summary.json",
+    "timeout": 10,
     "max_retries": 3
+  },
+  "cache": {
+    "enabled": true,
+    "duration_minutes": 5,
+    "directory": ".cache",
+    "max_size_mb": 100,
+    "auto_cleanup": true
+  },
+  "ai_analytics": {
+    "enabled": true,
+    "anomaly_detection": true,
+    "predictive_analysis": true,
+    "learning_window": 50,
+    "anomaly_threshold": 2.0,
+    "min_confidence": 0.7
+  },
+  "database": {
+    "enabled": true,
+    "path": "redhat_monitoring.db",
+    "retention_days": 30,
+    "auto_cleanup": true
+  },
+  "slo": {
+    "enabled": true,
+    "targets": {
+      "global_availability": 99.9,
+      "response_time": 2.0,
+      "uptime_monthly": 99.5
+    },
+    "tracking_period": "monthly",
+    "alert_on_breach": true
   },
   "notifications": {
     "email": {
-      "enabled": false,
-      "smtp_server": "smtp.example.com"
+      "enabled": true,
+      "smtp_server": "smtp.gmail.com",
+      "smtp_port": 587,
+      "use_tls": true,
+      "from_address": "test@example.com",
+      "to_addresses": [
+        "admin@example.com",
+        "ops@example.com"
+      ],
+      "username": "test@example.com",
+      "password": "test-password"
     },
-    "webhook": {
-      "enabled": false,
-      "url": "https://hooks.slack.com/..."
+    "webhooks": {
+      "enabled": true,
+      "urls": [
+        "https://hooks.slack.com/services/TEST/WEBHOOK/URL"
+      ]
+    },
+    "slack": {
+      "enabled": false
     }
+  },
+  "logging": {
+    "enabled": true,
+    "level": "INFO",
+    "file": "redhat_status.log",
+    "max_size_mb": 10,
+    "backup_count": 5,
+    "format": "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+  },
+  "output": {
+    "default_directory": ".",
+    "create_summary_report": true,
+    "timestamp_format": "%Y%m%d_%H%M%S",
+    "max_file_size_mb": 50,
+    "compression": false
+  },
+  "performance": {
+    "enable_metrics": true,
+    "detailed_timing": false,
+    "memory_profiling": false,
+    "max_concurrent_operations": 5
   }
 }
 ```
