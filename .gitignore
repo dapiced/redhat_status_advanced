@@ -2,12 +2,6 @@
 .cache/
 *.log
 *.tmp
-coverage.xml
-.coverage
-
-# Temporary analysis and validation scripts
-final_analysis.py
-validate_repo.py
 
 # Export files
 redhat_status_*.json
@@ -52,31 +46,7 @@ venv/
 .DS_Store
 Thumbs.db
 
-# Testing result documents
-*TEST_RESULTS.md
-TESTING_*.md
-COMPLETE_*.md
-FLAG_TESTING_*.md
-
-# Temporary test scripts  
-test_key_readme_flags.py
-test_readme_commands.py
-test_specific_commands.py
-
-# Runtime files
-.cache/
-reports/
-.pytest_cache/
-.venv/
-junit.xml
+# Build artifacts
 *.egg-info/
-build.log
-test-results/
-performance-results/
-coverage-reports/
-
-# OS and IDE files
-.DS_Store
-.vscode/
-*.pyc
-__pycache__/
+build/
+dist/

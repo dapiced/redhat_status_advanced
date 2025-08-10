@@ -1,8 +1,15 @@
-# Red Hat Status Checker - Professional Monitoring Platform
+# Red Hat Status Che- [📊 Core Features](#-core-features)
+- [🏭 Enterprise Features](#-enterprise-features)
+  - [Statistical Analysis and Forecasting](#statistical-analysis-and-forecasting)
+  - [Multi-Channel Notifications](#multi-channel-notifications)
+  - [Database Management](#database-management)
+- [⚙️ Configuration](#️-configuration)
+- [📋 Command Line Interface](#-command-line-interface)
+- [🔧 Troubleshooting](#-troubleshooting)Professional Monitoring Platform
 
-A comprehensive, enterprise-grade Python monitoring solution for Red Hat services, featuring a modular architecture, statistical analytics, a Prometheus exporter, and a foundation for an OpenShift Operator.
+A comprehensive, enterprise-grade Python monitoring solution for Red Hat services, featuring a modular architecture, statistical analytics, and a Prometheus exporter.
 
-**Version:** 3.1.1 - Docker Testing Infrastructure Edition
+**Version:** 3.1.1 - Production Edition
 
 ## 🎨 Demo
 
@@ -14,7 +21,6 @@ A comprehensive, enterprise-grade Python monitoring solution for Red Hat service
 - [✨ Key Features](#-key-features)
 - [🏗️ Architecture](#️-architecture)
 - [🏆 Red Hat Enterprise Integration](#-red-hat-enterprise-integration)
-  - [OpenShift Operator](#openshift-operator)
   - [Prometheus Exporter](#prometheus-exporter)
 - [� System Requirements](#-system-requirements)
 - [�🚀 Quick Start](#-quick-start)
@@ -23,10 +29,7 @@ A comprehensive, enterprise-grade Python monitoring solution for Red Hat service
   - [Statistical Analysis and Forecasting](#statistical-analysis-and-forecasting)
   - [Multi-Channel Notifications](#multi-channel-notifications)
   - [Database Management](#database-management)
-- [🐳 Container Deployment](#-container-deployment)
-- [🧪 Testing Infrastructure](#-testing-infrastructure)
-- [⚙️ Configuration](#️-configuration)
-- [📋 Command Line Interface](#-command-line-interface)
+- [ Command Line Interface](#-command-line-interface)
 - [🔧 Troubleshooting](#-troubleshooting)
 
 ---
@@ -35,20 +38,17 @@ A comprehensive, enterprise-grade Python monitoring solution for Red Hat service
 
 The Red Hat Status Checker is a sophisticated monitoring platform that provides real-time and historical visibility into Red Hat's service health. Built with a modular, cloud-native architecture, it is designed for enterprise scalability, maintainability, and seamless integration with modern DevOps and SRE workflows.
 
-This tool goes beyond simple status checking by storing historical data, performing statistical analysis to detect anomalies and forecast trends, and exposing this data through a CLI, a web UI, and a Prometheus exporter.
+This tool goes beyond simple status checking by storing historical data, performing statistical analysis to detect anomalies and forecast trends, and exposing this data through a comprehensive CLI and a Prometheus exporter.
 
 ## ✨ Key Features
 
 - 🏗️ **Modular Architecture**: Professional, maintainable codebase with clear separation of concerns.
-- ☸️ **Cloud-Native Ready**: Includes a **Prometheus exporter** for easy integration with OpenShift Monitoring and a foundation for a full **OpenShift Operator**.
 - 📈 **Statistical Analysis & Forecasting**:
   - **Anomaly Detection**: Uses Z-score statistical analysis to identify significant deviations from performance baselines.
   - **Trend Forecasting**: Employs linear regression to predict future service health trends.
-- 📊 **Multiple Interfaces**: Access data via a comprehensive **CLI**, a simple **Web UI**, or a **Prometheus Exporter**.
+- 📊 **Multiple Interfaces**: Access data via a comprehensive **CLI** or a **Prometheus Exporter**.
 - 💾 **Data Persistence**: Stores historical status data in a local SQLite database for trend analysis.
 - 🔔 **Multi-Channel Alerting**: Delivers notifications through email and webhooks (Slack, Teams, etc.).
-- 🐳 **Container-First**: Full support for Docker and Podman, with detailed examples for local and orchestrated environments.
-- 🧪 **Enterprise Testing**: Comprehensive testing infrastructure with 400+ tests, automated permission management, and CI/CD ready validation.
 
 ## 🏗️ Architecture
 
@@ -58,7 +58,6 @@ The application is designed with a clean separation of concerns, making it easy 
 graph TD
     subgraph "User Interfaces"
         CLI[💻 Command Line Interface]
-        WebUI[🌐 Web UI]
         Exporter[📈 Prometheus Exporter]
     end
 
@@ -84,7 +83,6 @@ graph TD
     end
 
     CLI --> Main
-    WebUI --> Main
     Exporter --> Main
     Main --> Config
     Main --> APIClient
@@ -104,30 +102,20 @@ graph TD
 
 This tool is designed to provide maximum value within the Red Hat ecosystem.
 
-### OpenShift Operator
-
-The repository includes the foundational structure for a **Kubernetes Operator** in the `/operator` directory. An Operator automates the deployment, scaling, and management of the status checker on OpenShift and other Kubernetes platforms.
-
-- **Deploy with Ease**: Use a simple Custom Resource (CR) to deploy the application.
-- **Automated Management**: The Operator pattern allows for automated updates, backups, and lifecycle management.
-- **OpenShift Native**: Built to feel like a native part of the OpenShift platform.
-
-See the `operator/` directory for the CRD and example Custom Resource.
-
 ### Prometheus Exporter
 
-The built-in Prometheus exporter allows for seamless integration with **OpenShift Monitoring**, which is built on Prometheus.
+The built-in Prometheus exporter allows for seamless integration with monitoring systems.
 
 - **Run the exporter**: `python3 redhat_status.py --enable-exporter`
-- **Scrape Metrics**: Configure the OpenShift monitoring stack to scrape the `/metrics` endpoint on port 8000.
-- **Build Dashboards**: Use the exported metrics to build Grafana dashboards and configure Alertmanager rules directly within the OpenShift console.
+- **Scrape Metrics**: Configure your monitoring stack to scrape the `/metrics` endpoint on port 8000.
+- **Build Dashboards**: Use the exported metrics to build Grafana dashboards and configure alerting rules.
 
 ---
 
 ## � System Requirements
 
 ### Python Requirements
-- **Python 3.8 or higher** (tested with 3.8, 3.9, 3.10, 3.11, 3.12)
+- **Python 3.8 or higher** (compatible with 3.8, 3.9, 3.10, 3.11, 3.12)
 - **pip package manager**
 
 ### System Dependencies
@@ -151,12 +139,7 @@ All Python dependencies are automatically managed through `requirements.txt`:
 - `requests>=2.25.0` - HTTP API client
 - `urllib3>=1.26.0` - HTTP connection pooling  
 - `prometheus-client>=0.14.0` - Metrics export
-- `Flask>=2.0.0` - Web UI framework
-
-**Testing Dependencies:**
-- `pytest>=7.0.0` - Test framework
 - `numpy>=1.20.0` - Statistical analysis
-- `pytest-cov>=4.0.0` - Test coverage
 
 **Note**: All built-in Python modules (`sqlite3`, `json`, `logging`, etc.) are included with Python 3.8+.
 
@@ -183,11 +166,6 @@ All Python dependencies are automatically managed through `requirements.txt`:
 4.  **Run the Prometheus Exporter**:
     ```bash
     python3 redhat_status.py --enable-exporter
-    ```
-
-5.  **Run the Web UI**:
-    ```bash
-    python3 redhat_status.py --web
     ```
 
 ## 📊 Core Features
@@ -226,128 +204,130 @@ python3 redhat_status.py --trends
 - **Data Retention**: Configuration options for automatic data cleanup and retention policies.
 - **Performance Optimized**: The database is indexed and can be manually maintained for optimal performance.
 
-## 🐳 Container Deployment
-
-The application is fully containerized for both **Docker** and **Podman** with comprehensive testing infrastructure.
-
-### Quick Container Usage
-- **Build the container**: `docker build -t redhat-status-checker .`
-- **Run a quick check**: `docker run --rm redhat-status-checker quick`
-- **Run with Exporter**: `docker run --rm -p 8000:8000 redhat-status-checker --enable-exporter`
-
-### 🧪 Container Testing Infrastructure
-
-We provide comprehensive testing suites for both Docker and Podman with enterprise-grade automation:
-
-#### Docker Testing
-```bash
-# Quick unit testing
-./test-docker.sh --unit-only
-
-# Full comprehensive testing  
-./test-docker.sh --comprehensive
-
-# PyTest integration testing
-python -m pytest tests/test_docker_integration.py -v
-
-# Complete validation
-./comprehensive-docker-test.sh
-```
-
-#### Podman Testing
-```bash
-# Podman unit testing
-./test-podman.sh --unit-only
-
-# Podman integration testing
-python -m pytest tests/test_podman_integration.py -v
-```
-
-#### Permission Management
-If you encounter Docker permission issues, use our automated fix:
-```bash
-./fix-docker-permissions.sh
-./verify-docker-setup.sh  # Run after session restart
-```
-
-#### Test Coverage
-- **60+ Docker tests** across integration, unit, and infrastructure validation
-- **40+ Podman tests** with equivalent functionality
-- **Permission-aware testing** with intelligent skip behavior
-- **Professional error handling** with clear user guidance
-
-Refer to the `Dockerfile`, `Dockerfile.test`, and `docker-compose.test.yml` for more details.
+## ⚙️ Configuration
 
 ## 🧪 Testing Infrastructure
 
-The Red Hat Status Checker includes comprehensive testing infrastructure with enterprise-grade automation and validation capabilities.
+The Red Hat Status Checker features a **professionally organized test suite** with over 30 test files across 6 categories, providing comprehensive coverage and maintainable structure.
 
-### 🏗️ Test Architecture
+### 🏗️ Organized Test Architecture
 
-Our testing infrastructure provides complete coverage across multiple dimensions:
+Our tests are organized into intuitive categories for maximum clarity and maintainability:
 
-- **Unit Tests**: 358+ tests covering all core functionality
-- **Integration Tests**: End-to-end workflow validation
-- **Container Tests**: Docker and Podman runtime validation
-- **Permission Tests**: Automated setup and validation
-- **Performance Tests**: Benchmarking and optimization validation
+```
+tests/
+├── unit/           # Pure unit tests (9 files) - Fast feedback
+├── functional/     # Feature workflows (9 files) - CLI, web, exports
+├── integration/    # External services (5 files) - Containers, infrastructure  
+├── e2e/           # End-to-end tests (2 files) - Complete flows
+├── features/      # Specific features (5 files) - Advanced functionality
+└── utils/         # Test utilities - Shared helpers
+```
+
+### 🎯 Quick Testing Commands
+
+#### Development Workflow
+```bash
+# Fast feedback - unit tests only
+pytest tests/unit/ -v
+
+# Feature development - unit + functional
+pytest tests/unit/core/ tests/functional/cli/ -v
+
+# Pre-commit validation - fast tests  
+pytest tests/unit/ tests/functional/ -m "not slow" -v
+
+# Full validation - all tests
+pytest -v
+```
+
+#### Category-Specific Testing
+```bash
+# Test by category
+pytest tests/unit/          # Pure unit tests
+pytest tests/functional/    # Feature workflows
+pytest tests/integration/   # External services
+pytest tests/e2e/          # End-to-end flows
+pytest tests/features/     # Advanced features
+
+# Test by functionality
+pytest tests/functional/cli/        # CLI testing
+pytest tests/integration/containers/ # Container testing
+pytest tests/unit/core/             # Core logic testing
+```
 
 ### 🐳 Container Testing
 
 #### Docker Testing Suite
 ```bash
-# Quick validation (recommended for CI/CD)
+# Quick validation (CI/CD ready)
 ./test-docker.sh --unit-only
 
-# Comprehensive testing (full validation)
+# Comprehensive testing
 ./test-docker.sh --comprehensive
 
-# Integration testing
-python -m pytest tests/test_docker_integration.py -v
-
-# Infrastructure validation
-./comprehensive-docker-test.sh
+# Organized integration testing
+pytest tests/integration/containers/ -k docker -v
 ```
 
-#### Podman Testing Suite
+#### Podman Testing Suite  
 ```bash
-# Podman unit tests
+# Podman validation
 ./test-podman.sh --unit-only
 
 # Podman integration tests
-python -m pytest tests/test_podman_integration.py -v
+pytest tests/integration/containers/ -k podman -v
 ```
 
-### 🔧 Permission Management
+### 📊 Test Coverage by Category
 
-Our automated permission management ensures smooth Docker setup:
+| Category | Files | Purpose | Example Command |
+|----------|-------|---------|-----------------|
+| **Unit** | 9 files | Core logic, fast feedback | `pytest tests/unit/` |
+| **Functional** | 9 files | CLI, web, exports | `pytest tests/functional/` |
+| **Integration** | 5 files | Containers, infrastructure | `pytest tests/integration/` |
+| **E2E** | 2 files | Complete workflows | `pytest tests/e2e/` |
+| **Features** | 5 files | Advanced functionality | `pytest tests/features/` |
 
+### �️ Test Management Tools
+
+#### Validation Script
 ```bash
-# Automated Docker permission setup
+# Validate test organization
+python3 scripts/test_organization.py validate
+
+# Generate test report  
+python3 scripts/test_organization.py report
+
+# Check pytest configuration
+python3 scripts/test_organization.py config
+```
+
+#### Permission Management
+```bash
+# Automated Docker setup
 ./fix-docker-permissions.sh
 
-# Verify setup after session restart
+# Verify setup after restart
 ./verify-docker-setup.sh
-
-# Manual validation
-docker ps  # Should work without sudo
 ```
 
-### 📊 Test Coverage
+### � Testing Guide
 
-| Test Suite | Coverage | Status |
-|------------|----------|--------|
-| **Unit Tests** | 358+ tests | ✅ Comprehensive |
-| **Docker Integration** | 23 tests | ✅ Full coverage |
-| **Docker Containers** | 19 tests | ✅ Complete |
-| **Docker Permissions** | 16 tests | ✅ Automated |
-| **Podman Integration** | 22 tests | ✅ Equivalent |
-| **Infrastructure** | 100+ tests | ✅ Enterprise-grade |
+See **[docs/TESTING_GUIDE.md](docs/TESTING_GUIDE.md)** for comprehensive documentation including:
+- Detailed test category explanations
+- Development workflow best practices  
+- Test writing guidelines
+- CI/CD pipeline strategies
+- Debugging and maintenance tips
 
 ### 🎯 Testing Best Practices
 
-- **Permission-Aware**: Tests intelligently skip when container runtimes unavailable
-- **Error Handling**: Professional degradation with clear user guidance
+- **🏗️ Organized Structure**: Intuitive categorization for easy navigation
+- **⚡ Fast Feedback**: Unit tests provide quick validation during development
+- **🔄 Scalable**: Clear patterns for adding new tests in appropriate categories
+- **🤖 CI/CD Ready**: Optimized for automated pipeline execution
+- **📖 Well Documented**: Comprehensive guides and examples
 - **Automation Ready**: Full CI/CD integration with proper exit codes
 - **Documentation**: Comprehensive help and examples for all test scripts
 - **Validation**: Complete infrastructure and functionality validation
@@ -394,7 +374,6 @@ The application provides a rich CLI for scripting and automation.
 - `--search <term>`: Search for a specific service by name.
 - `--performance`: Show performance metrics after a run.
 - `--enable-exporter`: Run the Prometheus exporter.
-- `--web`: Run the Flask web UI.
 
 **Advanced Analytics Flags:**
 - `--ai-insights`: AI-powered health analysis and anomaly detection.
