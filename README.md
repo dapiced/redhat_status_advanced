@@ -342,12 +342,6 @@ python3 redhat_status.py --watch 60 --notify --filter issues --log-level WARNING
 
 The application uses `config.json` for configuration. Key sections:
 
-- **api**: Red Hat Status API settings and retry configuration
-- **cache**: Caching TTL, size, and compression options  
-- **database**: Database path and data retention policies
-- **ai_analytics**: Anomaly detection and forecasting sensitivity
-- **notifications**: SMTP and webhook settings for alerts
-
 Example configuration structure:
 ```json
 
