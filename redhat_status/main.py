@@ -205,8 +205,8 @@ class RedHatStatusChecker:
             logging.error(f"Full check failed: {e}")
             self.presenter.present_error(f"Error during full check: {e}")
     
-    def export_to_file(self, output_dir: str = ".") -> None:
-        """Export data to files"""
+    def export_to_file(self, output_dir: str = ".", export_format: str = "json") -> None:
+        """Export data to files in specified format"""
         self.presenter.present_message("\n💾 DATA EXPORT")
         self.presenter.present_message("-" * 40)
         
@@ -223,12 +223,21 @@ class RedHatStatusChecker:
             os.makedirs(output_dir, exist_ok=True)
             
             timestamp = datetime.now().strftime(self._get_config_value('output', 'timestamp_format', '%Y%m%d_%H%M%S'))
-            filename = os.path.join(output_dir, f"redhat_status_{timestamp}.json")
             
-            # Export JSON data
-            import json
-            with open(filename, 'w', encoding='utf-8') as f:
-                json.dump(data, f, indent=2, ensure_ascii=False)
+            # Normalize format
+            export_format = export_format.lower()
+            if export_format not in ['json', 'csv', 'txt']:
+                export_format = 'json'
+            
+            filename = os.path.join(output_dir, f"redhat_status_{timestamp}.{export_format}")
+            
+            # Export data in specified format
+            if export_format == 'json':
+                self._export_json(data, filename)
+            elif export_format == 'csv':
+                self._export_csv(data, filename)
+            elif export_format == 'txt':
+                self._export_txt(data, filename)
             
             # Get file size
             file_size = os.path.getsize(filename)
@@ -236,6 +245,7 @@ class RedHatStatusChecker:
             
             self.presenter.present_message(f"✅ Data exported to: {filename}")
             self.presenter.present_message(f"📊 File size: {file_size_kb:.1f} KB ({file_size} bytes)")
+            self.presenter.present_message(f"📄 Format: {export_format.upper()}")
             self.presenter.present_message(f"📅 Export time: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
             
             # Create summary report
@@ -275,6 +285,111 @@ class RedHatStatusChecker:
         except Exception as e:
             logging.error(f"Failed to create summary report: {e}")
             self.presenter.present_error(f"Error creating summary report: {str(e)}")
+    
+    def _export_json(self, data: dict, filename: str) -> None:
+        """Export data in JSON format"""
+        import json
+        with open(filename, 'w', encoding='utf-8') as f:
+            json.dump(data, f, indent=2, ensure_ascii=False)
+    
+    def _export_csv(self, data: dict, filename: str) -> None:
+        """Export data in CSV format"""
+        import csv
+        
+        # Extract services and incidents for CSV export
+        services = []
+        
+        # Get services from components
+        if 'components' in data:
+            for component in data['components']:
+                services.append({
+                    'name': component.get('name', ''),
+                    'status': component.get('status', ''),
+                    'description': component.get('description', ''),
+                    'created_at': component.get('created_at', ''),
+                    'updated_at': component.get('updated_at', ''),
+                    'id': component.get('id', ''),
+                    'group_id': component.get('group_id', ''),
+                    'group': component.get('group', True),
+                    'page_id': component.get('page_id', ''),
+                    'only_show_if_degraded': component.get('only_show_if_degraded', False),
+                    'position': component.get('position', 0)
+                })
+        
+        with open(filename, 'w', newline='', encoding='utf-8') as f:
+            if services:
+                fieldnames = ['name', 'status', 'description', 'created_at', 'updated_at', 
+                             'id', 'group_id', 'group', 'page_id', 'only_show_if_degraded', 'position']
+                writer = csv.DictWriter(f, fieldnames=fieldnames)
+                writer.writeheader()
+                writer.writerows(services)
+            else:
+                # If no services, write basic page info
+                page_info = {
+                    'page_name': data.get('page', {}).get('name', ''),
+                    'page_url': data.get('page', {}).get('url', ''),
+                    'overall_status': data.get('status', {}).get('description', ''),
+                    'status_indicator': data.get('status', {}).get('indicator', ''),
+                    'last_updated': data.get('page', {}).get('updated_at', '')
+                }
+                fieldnames = list(page_info.keys())
+                writer = csv.DictWriter(f, fieldnames=fieldnames)
+                writer.writeheader()
+                writer.writerow(page_info)
+    
+    def _export_txt(self, data: dict, filename: str) -> None:
+        """Export data in human-readable text format"""
+        with open(filename, 'w', encoding='utf-8') as f:
+            f.write("RED HAT STATUS DATA EXPORT\n")
+            f.write("=" * 50 + "\n\n")
+            
+            # Page info
+            page = data.get('page', {})
+            f.write(f"Page: {page.get('name', 'N/A')}\n")
+            f.write(f"URL: {page.get('url', 'N/A')}\n")
+            f.write(f"Last Updated: {page.get('updated_at', 'N/A')}\n\n")
+            
+            # Overall status
+            status = data.get('status', {})
+            f.write(f"Overall Status: {status.get('description', 'N/A')}\n")
+            f.write(f"Status Indicator: {status.get('indicator', 'N/A')}\n\n")
+            
+            # Components/Services
+            components = data.get('components', [])
+            if components:
+                f.write("SERVICES STATUS\n")
+                f.write("-" * 30 + "\n\n")
+                
+                for component in components:
+                    f.write(f"Service: {component.get('name', 'N/A')}\n")
+                    f.write(f"Status: {component.get('status', 'N/A')}\n")
+                    f.write(f"Description: {component.get('description', 'N/A')}\n")
+                    f.write(f"Updated: {component.get('updated_at', 'N/A')}\n")
+                    f.write("-" * 20 + "\n")
+            
+            # Incidents
+            incidents = data.get('incidents', [])
+            if incidents:
+                f.write("\nRECENT INCIDENTS\n")
+                f.write("-" * 30 + "\n\n")
+                
+                for incident in incidents:
+                    f.write(f"Incident: {incident.get('name', 'N/A')}\n")
+                    f.write(f"Status: {incident.get('status', 'N/A')}\n")
+                    f.write(f"Impact: {incident.get('impact', 'N/A')}\n")
+                    f.write(f"Created: {incident.get('created_at', 'N/A')}\n")
+                    f.write(f"Updated: {incident.get('updated_at', 'N/A')}\n")
+                    
+                    # Incident updates
+                    updates = incident.get('incident_updates', [])
+                    if updates:
+                        f.write("Updates:\n")
+                        for update in updates:
+                            f.write(f"  - {update.get('created_at', 'N/A')}: {update.get('body', 'N/A')}\n")
+                    
+                    f.write("-" * 20 + "\n")
+            
+            f.write(f"\nExport generated: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n")
     
     def show_performance_metrics(self) -> None:
         """Display performance metrics"""
@@ -676,12 +791,12 @@ def execute_main_mode(app, mode, args):
             app.simple_check_only()
             app.full_check_with_services()
         elif mode == "export":
-            app.export_to_file(args.output)
+            app.export_to_file(args.output, getattr(args, 'format', 'json'))
         elif mode == "all":
             app.quick_status_check(quiet_mode=args.quiet)
             app.simple_check_only()
             app.full_check_with_services()
-            app.export_to_file(args.output)
+            app.export_to_file(args.output, getattr(args, 'format', 'json'))
 
     if args.performance:
         app.show_performance_metrics()

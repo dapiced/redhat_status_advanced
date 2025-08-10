@@ -6,6 +6,7 @@
 # Export files
 redhat_status_*.json
 redhat_status_*.csv
+redhat_status_*.txt
 redhat_summary_*.txt
 status_history_*.csv
 
