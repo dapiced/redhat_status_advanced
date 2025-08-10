@@ -11,9 +11,6 @@ A comprehensive, enterprise-grade Python monitoring solution for Red Hat service
 
 **Version:** 3.1.1 - Production Edition
 
-## 🎨 Demo
-
-![Démo CLI](./redhat_status.svg)
 
 ## Table of Contents
 
