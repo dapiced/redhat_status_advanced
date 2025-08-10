@@ -1,59 +1,15 @@
 {
   "api": {
-    "url": "https://status.redhat.com/api/v2/summary.json",
+    "base_url": "https://status.redhat.com/api/v2/summary.json",
     "timeout": 10,
-    "max_retries": 3,
-    "retry_delay": 2,
-    "concurrent_requests": 1,
-    "rate_limit_delay": 0.5
-  },
-  "output": {
-    "default_directory": ".",
-    "create_summary_report": true,
-    "timestamp_format": "%Y%m%d_%H%M%S",
-    "max_file_size_mb": 50,
-    "compression": false
-  },
-  "display": {
-    "show_percentages": true,
-    "show_health_indicator": true,
-    "show_group_summaries": true,
-    "show_performance_metrics": false,
-    "color_output": true,
-    "progress_bars": false
+    "max_retries": 3
   },
   "cache": {
     "enabled": true,
-    "ttl": 300,
+    "duration_minutes": 5,
     "directory": ".cache",
     "max_size_mb": 100,
-    "compression": true,
-    "cleanup_interval": 3600
-  },
-  "logging": {
-    "enabled": true,
-    "level": "INFO",
-    "file": "redhat_status.log",
-    "max_size_mb": 10,
-    "backup_count": 5,
-    "format": "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
-  },
-  "monitoring": {
-    "enabled": true,
-    "alert_thresholds": {
-      "availability_critical": 85.0,
-      "availability_warning": 95.0,
-      "response_time_warning": 5.0,
-      "error_rate_warning": 5.0
-    },
-    "health_check_interval": 300,
-    "auto_recovery_attempts": 3
-  },
-  "performance": {
-    "enable_metrics": true,
-    "detailed_timing": false,
-    "memory_profiling": false,
-    "max_concurrent_operations": 5
+    "auto_cleanup": true
   },
   "ai_analytics": {
     "enabled": true,
@@ -68,6 +24,16 @@
     "path": "redhat_monitoring.db",
     "retention_days": 30,
     "auto_cleanup": true
+  },
+  "slo": {
+    "enabled": true,
+    "targets": {
+      "global_availability": 99.9,
+      "response_time": 2.0,
+      "uptime_monthly": 99.5
+    },
+    "tracking_period": "monthly",
+    "alert_on_breach": true
   },
   "notifications": {
     "email": {
@@ -88,16 +54,30 @@
       "urls": [
         "https://hooks.slack.com/services/TEST/WEBHOOK/URL"
       ]
+    },
+    "slack": {
+      "enabled": false
     }
   },
-  "slo": {
+  "logging": {
     "enabled": true,
-    "targets": {
-      "global_availability": 99.9,
-      "response_time": 2.0,
-      "uptime_monthly": 99.5
-    },
-    "tracking_period": "monthly",
-    "alert_on_breach": true
+    "level": "INFO",
+    "file": "redhat_status.log",
+    "max_size_mb": 10,
+    "backup_count": 5,
+    "format": "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+  },
+  "output": {
+    "default_directory": ".",
+    "create_summary_report": true,
+    "timestamp_format": "%Y%m%d_%H%M%S",
+    "max_file_size_mb": 50,
+    "compression": false
+  },
+  "performance": {
+    "enable_metrics": true,
+    "detailed_timing": false,
+    "memory_profiling": false,
+    "max_concurrent_operations": 5
   }
 }

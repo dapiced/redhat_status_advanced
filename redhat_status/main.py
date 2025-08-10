@@ -18,11 +18,16 @@ Author: Red Hat Status Checker v3.1.0 - Modular Edition
 import sys
 import os
 import argparse
+import json
+import csv
+import time
+import logging
 from typing import Dict, Any
 import logging
 import json
 import time
 from datetime import datetime
+from pathlib import Path
 from pathlib import Path
 
 # Ensure the project root is in the Python path for package imports
@@ -1050,7 +1055,268 @@ def handle_health_report(app, args):
         app.presenter.present_error(f"Error generating health report: {e}")
 
 def handle_insights(app, args):
-    app.presenter.present_message("💡 Insights handler not fully implemented in this refactoring.")
+    """Show comprehensive system insights and patterns"""
+    try:
+        app.presenter.present_message("\n💡 SYSTEM INSIGHTS & PATTERNS")
+        app.presenter.present_message("=" * 50)
+        
+        # Get current status data for analysis
+        app.presenter.present_message("\n📊 Fetching current service data...")
+        api_response = fetch_status_data(app.api_client)
+        
+        if not api_response.success or not api_response.data:
+            app.presenter.present_error("Failed to fetch data for insights analysis")
+            return
+        
+        status_data = api_response.data
+        health_metrics = app.api_client.get_service_health_metrics(status_data)
+        
+        # Current System Health Insights
+        app.presenter.present_message("\n🏥 CURRENT HEALTH INSIGHTS")
+        app.presenter.present_message("-" * 35)
+        
+        availability = health_metrics.get('availability_percentage', 0)
+        total_services = health_metrics.get('total_services', 0)
+        operational_services = health_metrics.get('operational_services', 0)
+        services_with_issues = health_metrics.get('services_with_issues', 0)
+        
+        # Health categorization and insights
+        if availability >= 99.5:
+            health_status = "EXCELLENT"
+            health_emoji = "🟢"
+            insight = "System is performing exceptionally well with minimal issues"
+        elif availability >= 97.0:
+            health_status = "GOOD"
+            health_emoji = "🟡"
+            insight = "System is stable with minor issues that should be monitored"
+        elif availability >= 90.0:
+            health_status = "FAIR"
+            health_emoji = "🟠"
+            insight = "System has notable issues requiring attention"
+        else:
+            health_status = "POOR"
+            health_emoji = "🔴"
+            insight = "System has significant issues requiring immediate action"
+        
+        app.presenter.present_message(f"{health_emoji} Health Status: {health_status}")
+        app.presenter.present_message(f"📋 Insight: {insight}")
+        app.presenter.present_message(f"📊 Service Ratio: {operational_services}/{total_services} operational")
+        
+        # Service Distribution Analysis
+        app.presenter.present_message("\n📈 SERVICE DISTRIBUTION ANALYSIS")
+        app.presenter.present_message("-" * 40)
+        
+        components = status_data.get('components', [])
+        
+        # Analyze service status distribution
+        status_distribution = {}
+        for component in components:
+            status = component.get('status', 'unknown')
+            if status not in status_distribution:
+                status_distribution[status] = 0
+            status_distribution[status] += 1
+        
+        app.presenter.present_message("Status Distribution:")
+        for status, count in sorted(status_distribution.items(), key=lambda x: x[1], reverse=True):
+            percentage = (count / total_services * 100) if total_services > 0 else 0
+            status_emoji = "🟢" if status == 'operational' else "🟡" if 'degraded' in status else "🔴"
+            app.presenter.present_message(f"  {status_emoji} {status.title()}: {count} services ({percentage:.1f}%)")
+        
+        # Service Category Analysis
+        app.presenter.present_message("\n🏷️ SERVICE CATEGORY INSIGHTS")
+        app.presenter.present_message("-" * 35)
+        
+        # Analyze services by name patterns to identify categories
+        categories = {
+            'OpenShift': [c for c in components if 'openshift' in c.get('name', '').lower()],
+            'Red Hat Enterprise Linux': [c for c in components if any(term in c.get('name', '').lower() for term in ['rhel', 'enterprise linux'])],
+            'Ansible': [c for c in components if 'ansible' in c.get('name', '').lower()],
+            'Cloud Services': [c for c in components if any(term in c.get('name', '').lower() for term in ['cloud', 'hybrid'])],
+            'Developer Tools': [c for c in components if any(term in c.get('name', '').lower() for term in ['developer', 'ide', 'build'])],
+            'Container': [c for c in components if any(term in c.get('name', '').lower() for term in ['container', 'registry', 'quay'])],
+            'Support & Documentation': [c for c in components if any(term in c.get('name', '').lower() for term in ['support', 'documentation', 'portal'])],
+        }
+        
+        for category, services in categories.items():
+            if services:
+                operational_count = len([s for s in services if s.get('status') == 'operational'])
+                category_availability = (operational_count / len(services) * 100) if services else 0
+                
+                if category_availability >= 99:
+                    category_emoji = "🟢"
+                elif category_availability >= 95:
+                    category_emoji = "🟡"
+                else:
+                    category_emoji = "🔴"
+                
+                app.presenter.present_message(f"  {category_emoji} {category}: {operational_count}/{len(services)} operational ({category_availability:.1f}%)")
+        
+        # Performance Insights
+        app.presenter.present_message("\n⚡ PERFORMANCE INSIGHTS")
+        app.presenter.present_message("-" * 30)
+        
+        # Calculate response time metrics if available
+        try:
+            import time
+            start_time = time.time()
+            # Make a test API call to measure response time
+            test_response = fetch_status_data(app.api_client)
+            response_time = time.time() - start_time
+            
+            if response_time < 1.0:
+                perf_emoji = "🟢"
+                perf_status = "EXCELLENT"
+            elif response_time < 3.0:
+                perf_emoji = "🟡"
+                perf_status = "GOOD"
+            else:
+                perf_emoji = "🔴"
+                perf_status = "SLOW"
+            
+            app.presenter.present_message(f"{perf_emoji} API Response Time: {response_time:.3f}s ({perf_status})")
+            
+        except Exception as e:
+            app.presenter.present_message(f"⚠️ Could not measure API performance: {e}")
+        
+        # Historical Insights (if available)
+        if hasattr(app, 'db_manager') and app.db_manager and hasattr(app.db_manager, 'is_enabled') and app.db_manager.is_enabled():
+            app.presenter.present_message("\n📜 HISTORICAL INSIGHTS")
+            app.presenter.present_message("-" * 25)
+            
+            try:
+                recent_snapshots = app.db_manager.get_status_history(limit=10)
+                if recent_snapshots:
+                    # Calculate trend analysis
+                    availabilities = [s.get('availability_percentage', 0) for s in recent_snapshots]
+                    
+                    if len(availabilities) >= 2:
+                        latest_avg = sum(availabilities[:3]) / min(3, len(availabilities))
+                        older_avg = sum(availabilities[-3:]) / min(3, len(availabilities[-3:]))
+                        trend = latest_avg - older_avg
+                        
+                        if abs(trend) < 0.5:
+                            trend_emoji = "➡️"
+                            trend_desc = "Stable"
+                            trend_insight = "Service availability is consistent"
+                        elif trend > 0:
+                            trend_emoji = "📈"
+                            trend_desc = f"Improving (+{trend:.1f}%)"
+                            trend_insight = "Service reliability is trending upward"
+                        else:
+                            trend_emoji = "📉"
+                            trend_desc = f"Declining ({trend:.1f}%)"
+                            trend_insight = "Service reliability needs attention"
+                        
+                        app.presenter.present_message(f"{trend_emoji} Trend: {trend_desc}")
+                        app.presenter.present_message(f"💡 Insight: {trend_insight}")
+                    
+                    # Pattern analysis
+                    max_availability = max(availabilities)
+                    min_availability = min(availabilities)
+                    volatility = max_availability - min_availability
+                    
+                    if volatility < 1.0:
+                        stability_emoji = "🟢"
+                        stability_desc = "VERY STABLE"
+                    elif volatility < 5.0:
+                        stability_emoji = "🟡"
+                        stability_desc = "STABLE"
+                    else:
+                        stability_emoji = "🔴"
+                        stability_desc = "VOLATILE"
+                    
+                    app.presenter.present_message(f"{stability_emoji} Stability: {stability_desc} (±{volatility:.1f}%)")
+                    
+                else:
+                    app.presenter.present_message("ℹ️ No historical data available for trend analysis")
+                    app.presenter.present_message("💡 Run status checks regularly to build historical insights")
+                    
+            except Exception as e:
+                app.presenter.present_message(f"⚠️ Historical analysis failed: {e}")
+        else:
+            app.presenter.present_message("\n📜 HISTORICAL INSIGHTS")
+            app.presenter.present_message("-" * 25)
+            app.presenter.present_message("ℹ️ Database not enabled for historical insights")
+            app.presenter.present_message("💡 Enable database in config.json for trend analysis")
+        
+        # AI-Powered Insights (if available)
+        if app.analytics:
+            app.presenter.present_message("\n🤖 AI-POWERED INSIGHTS")
+            app.presenter.present_message("-" * 30)
+            
+            try:
+                # Generate health score insights
+                health_score_data = app.analytics.generate_health_score(status_data)
+                if health_score_data:
+                    app.presenter.present_message(f"🎯 AI Health Score: {health_score_data}")
+                
+                # Service reliability predictions
+                try:
+                    predictions = app.analytics.generate_predictions("Red Hat Services", hours_ahead=24)
+                    if predictions:
+                        app.presenter.present_message("🔮 24-Hour Predictions:")
+                        if isinstance(predictions, list):
+                            for prediction in predictions[:3]:
+                                app.presenter.present_message(f"   • {prediction}")
+                        else:
+                            app.presenter.present_message(f"   • {predictions}")
+                except Exception as e:
+                    app.presenter.present_message(f"   ⚠️ Prediction generation failed: {e}")
+                
+            except Exception as e:
+                app.presenter.present_message(f"⚠️ AI analysis failed: {e}")
+        else:
+            app.presenter.present_message("\n🤖 AI-POWERED INSIGHTS")
+            app.presenter.present_message("-" * 30)
+            app.presenter.present_message("ℹ️ AI analytics not enabled")
+            app.presenter.present_message("💡 Enable AI analytics in config.json for advanced insights")
+        
+        # Recommendations
+        app.presenter.present_message("\n💡 ACTIONABLE RECOMMENDATIONS")
+        app.presenter.present_message("-" * 35)
+        
+        recommendations = []
+        
+        # Service availability recommendations
+        if availability < 95:
+            recommendations.append("🚨 URGENT: Address service availability issues immediately")
+        elif availability < 99:
+            recommendations.append("⚠️ Monitor affected services closely for resolution")
+        
+        # Category-specific recommendations
+        for category, services in categories.items():
+            if services:
+                category_availability = len([s for s in services if s.get('status') == 'operational']) / len(services) * 100
+                if category_availability < 90:
+                    recommendations.append(f"🔧 Focus attention on {category} services")
+        
+        # General recommendations
+        if not hasattr(app, 'db_manager') or not app.db_manager:
+            recommendations.append("📊 Enable database features for better insights")
+        
+        if not app.analytics:
+            recommendations.append("🤖 Enable AI analytics for predictive insights")
+        
+        if availability >= 99:
+            recommendations.append("✅ Continue current monitoring practices")
+            recommendations.append("📈 Consider implementing proactive monitoring")
+        
+        # Display recommendations
+        if recommendations:
+            for i, rec in enumerate(recommendations, 1):
+                app.presenter.present_message(f"{i}. {rec}")
+        else:
+            app.presenter.present_message("✅ No specific recommendations at this time")
+        
+        # Summary
+        app.presenter.present_message("\n" + "=" * 50)
+        app.presenter.present_message(f"💡 Insights analysis completed at {datetime.now().strftime('%H:%M:%S')}")
+        app.presenter.present_message(f"📊 System Health: {health_status} ({availability:.1f}% availability)")
+        app.presenter.present_message(f"🎯 Key Focus: {insight}")
+        
+    except Exception as e:
+        app.presenter.present_error(f"Error generating system insights: {e}")
+        logging.error(f"System insights error: {e}", exc_info=True)
 
 def handle_trends(app, args):
     """Show availability trends and historical data"""
@@ -1247,10 +1513,671 @@ def handle_slo_dashboard(app, args):
         logging.error(f"SLO dashboard error: {e}", exc_info=True)
 
 def handle_export_ai_report(app, args):
-    app.presenter.present_message("📊 Export AI Report handler not fully implemented in this refactoring.")
+    """Generate and export comprehensive AI analysis report"""
+    try:
+        app.presenter.present_message("📊 GENERATING AI ANALYSIS REPORT")
+        app.presenter.present_message("=" * 50)
+        
+        # Check if AI analytics is available
+        if not app.analytics:
+            app.presenter.present_error("AI Analytics not available (enterprise feature disabled)")
+            app.presenter.present_message("💡 Enable AI analytics in config.json to use this feature")
+            return
+        
+        # Get current status data
+        app.presenter.present_message("\n📈 Fetching current service status...")
+        api_response = fetch_status_data(app.api_client)
+        
+        if not api_response.success or not api_response.data:
+            app.presenter.present_error("Failed to fetch status data for AI analysis")
+            return
+        
+        status_data = api_response.data
+        health_metrics = app.api_client.get_service_health_metrics(status_data)
+        
+        # Generate timestamp for file naming
+        timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
+        
+        # Ensure output directory exists
+        output_dir = getattr(args, 'output', '.')
+        os.makedirs(output_dir, exist_ok=True)
+        
+        # Generate comprehensive AI analysis
+        app.presenter.present_message("\n🤖 Running AI analysis...")
+        
+        ai_report = {
+            'metadata': {
+                'report_type': 'AI Analysis Report',
+                'generated_at': datetime.now().isoformat(),
+                'version': '3.1.0',
+                'data_source': 'Red Hat Status API'
+            },
+            'executive_summary': {},
+            'current_status': health_metrics,
+            'ai_insights': {},
+            'anomaly_analysis': {},
+            'predictive_analysis': {},
+            'slo_analysis': {},
+            'recommendations': [],
+            'raw_data': status_data
+        }
+        
+        # Executive Summary
+        app.presenter.present_message("   • Generating executive summary...")
+        ai_report['executive_summary'] = {
+            'overall_health_score': health_metrics.get('availability_percentage', 0),
+            'total_services': health_metrics.get('total_services', 0),
+            'operational_services': health_metrics.get('operational_services', 0),
+            'services_with_issues': health_metrics.get('services_with_issues', 0),
+            'report_timestamp': datetime.now().isoformat(),
+            'status_indicator': health_metrics.get('status_indicator', 'unknown')
+        }
+        
+        # AI Insights
+        app.presenter.present_message("   • Analyzing service patterns...")
+        try:
+            # Generate health score analysis
+            health_score_data = app.analytics.generate_health_score(status_data)
+            ai_report['ai_insights']['health_score_analysis'] = health_score_data or "No health score data available"
+            
+            # Service pattern analysis
+            service_patterns = []
+            components = status_data.get('components', [])
+            for component in components[:10]:  # Analyze top 10 services
+                pattern = {
+                    'name': component.get('name', 'Unknown'),
+                    'status': component.get('status', 'unknown'),
+                    'reliability_score': 100.0 if component.get('status') == 'operational' else 0.0
+                }
+                service_patterns.append(pattern)
+            
+            ai_report['ai_insights']['service_patterns'] = service_patterns
+            
+        except Exception as e:
+            ai_report['ai_insights']['error'] = f"Failed to generate insights: {e}"
+        
+        # Anomaly Analysis
+        app.presenter.present_message("   • Performing anomaly detection...")
+        try:
+            if hasattr(app, 'db_manager') and app.db_manager and hasattr(app.db_manager, 'is_enabled') and app.db_manager.is_enabled():
+                historical_data = app.db_manager.get_status_history(limit=50)
+                if historical_data:
+                    anomalies = app.analytics.detect_anomalies(historical_data)
+                    ai_report['anomaly_analysis'] = {
+                        'analysis_performed': True,
+                        'data_points_analyzed': len(historical_data),
+                        'results': anomalies
+                    }
+                else:
+                    ai_report['anomaly_analysis'] = {
+                        'analysis_performed': False,
+                        'reason': 'No historical data available'
+                    }
+            else:
+                ai_report['anomaly_analysis'] = {
+                    'analysis_performed': False,
+                    'reason': 'Database not available for historical analysis'
+                }
+        except Exception as e:
+            ai_report['anomaly_analysis'] = {
+                'analysis_performed': False,
+                'error': str(e)
+            }
+        
+        # Predictive Analysis
+        app.presenter.present_message("   • Generating predictions...")
+        try:
+            predictions = app.analytics.generate_predictions("Red Hat Services", hours_ahead=24)
+            ai_report['predictive_analysis'] = {
+                'forecast_horizon': '24 hours',
+                'predictions': predictions if predictions else []
+            }
+        except Exception as e:
+            ai_report['predictive_analysis'] = {
+                'error': f"Prediction generation failed: {e}"
+            }
+        
+        # SLO Analysis
+        app.presenter.present_message("   • Analyzing SLO compliance...")
+        try:
+            # Get SLO configuration
+            if hasattr(app.config, 'config') and isinstance(app.config.config, dict):
+                slo_config = app.config.config.get('slo', {})
+            elif isinstance(app.config, dict):
+                slo_config = app.config.get('slo', {})
+            else:
+                slo_config = {'enabled': False}
+            
+            if slo_config.get('enabled', False):
+                slo_targets = slo_config.get('targets', {})
+                availability_target = slo_targets.get('global_availability', 99.9)
+                
+                # Prepare data for SLO analysis
+                analysis_data = []
+                for component in status_data.get('components', []):
+                    analysis_data.append({
+                        'name': component.get('name', 'Unknown'),
+                        'status': component.get('status', 'unknown'),
+                        'availability': 100.0 if component.get('status') == 'operational' else 0.0
+                    })
+                
+                slo_analysis = app.analytics.generate_slo_analysis(analysis_data, availability_target)
+                ai_report['slo_analysis'] = {
+                    'enabled': True,
+                    'targets': slo_targets,
+                    'current_performance': {
+                        'global_availability': health_metrics.get('availability_percentage', 0)
+                    },
+                    'detailed_analysis': slo_analysis
+                }
+            else:
+                ai_report['slo_analysis'] = {
+                    'enabled': False,
+                    'reason': 'SLO tracking disabled in configuration'
+                }
+        except Exception as e:
+            ai_report['slo_analysis'] = {
+                'error': f"SLO analysis failed: {e}"
+            }
+        
+        # Generate Recommendations
+        app.presenter.present_message("   • Generating recommendations...")
+        recommendations = []
+        
+        # Health-based recommendations
+        availability = health_metrics.get('availability_percentage', 0)
+        if availability < 95:
+            recommendations.append({
+                'category': 'Critical',
+                'title': 'Address Service Availability Issues',
+                'description': f'Current availability ({availability:.1f}%) is below acceptable thresholds',
+                'priority': 'High'
+            })
+        elif availability < 99:
+            recommendations.append({
+                'category': 'Optimization',
+                'title': 'Improve Service Reliability',
+                'description': f'Availability could be improved from {availability:.1f}%',
+                'priority': 'Medium'
+            })
+        
+        # Monitoring recommendations
+        recommendations.append({
+            'category': 'Monitoring',
+            'title': 'Enhance Monitoring Coverage',
+            'description': 'Consider implementing more comprehensive monitoring and alerting',
+            'priority': 'Medium'
+        })
+        
+        # Analytics recommendations
+        if not hasattr(app, 'db_manager') or not app.db_manager:
+            recommendations.append({
+                'category': 'Analytics',
+                'title': 'Enable Historical Data Collection',
+                'description': 'Enable database features for better trend analysis and anomaly detection',
+                'priority': 'Low'
+            })
+        
+        ai_report['recommendations'] = recommendations
+        
+        # Export to JSON file
+        json_filename = os.path.join(output_dir, f"ai_analysis_report_{timestamp}.json")
+        app.presenter.present_message(f"\n💾 Exporting JSON report...")
+        
+        with open(json_filename, 'w', encoding='utf-8') as f:
+            json.dump(ai_report, f, indent=2, ensure_ascii=False, default=str)
+        
+        # Export to human-readable report
+        txt_filename = os.path.join(output_dir, f"ai_analysis_report_{timestamp}.txt")
+        app.presenter.present_message(f"📋 Generating human-readable report...")
+        
+        with open(txt_filename, 'w', encoding='utf-8') as f:
+            f.write("RED HAT STATUS AI ANALYSIS REPORT\n")
+            f.write("=" * 60 + "\n\n")
+            
+            # Executive Summary
+            f.write("EXECUTIVE SUMMARY\n")
+            f.write("-" * 20 + "\n")
+            exec_summary = ai_report['executive_summary']
+            f.write(f"Report Generated: {exec_summary['report_timestamp']}\n")
+            f.write(f"Overall Health Score: {exec_summary['overall_health_score']:.1f}%\n")
+            f.write(f"Total Services: {exec_summary['total_services']}\n")
+            f.write(f"Operational Services: {exec_summary['operational_services']}\n")
+            f.write(f"Services with Issues: {exec_summary['services_with_issues']}\n")
+            f.write(f"Status Indicator: {exec_summary['status_indicator']}\n\n")
+            
+            # Current Status
+            f.write("CURRENT STATUS DETAILS\n")
+            f.write("-" * 25 + "\n")
+            f.write(f"Page: {health_metrics.get('page_name', 'Unknown')}\n")
+            f.write(f"Last Updated: {health_metrics.get('last_updated', 'Unknown')}\n")
+            f.write(f"Overall Status: {health_metrics.get('overall_status', 'Unknown')}\n\n")
+            
+            # AI Insights
+            f.write("AI INSIGHTS\n")
+            f.write("-" * 15 + "\n")
+            insights = ai_report['ai_insights']
+            if 'health_score_analysis' in insights:
+                f.write(f"Health Score Analysis: {insights['health_score_analysis']}\n")
+            
+            if 'service_patterns' in insights:
+                f.write(f"\nService Pattern Analysis:\n")
+                for pattern in insights['service_patterns'][:5]:
+                    f.write(f"  • {pattern['name']}: {pattern['status']} (Reliability: {pattern['reliability_score']:.1f}%)\n")
+            f.write("\n")
+            
+            # Anomaly Analysis
+            f.write("ANOMALY ANALYSIS\n")
+            f.write("-" * 20 + "\n")
+            anomaly_info = ai_report['anomaly_analysis']
+            if anomaly_info.get('analysis_performed', False):
+                f.write(f"Data Points Analyzed: {anomaly_info.get('data_points_analyzed', 0)}\n")
+                results = anomaly_info.get('results', {})
+                if isinstance(results, dict) and 'anomaly_count' in results:
+                    f.write(f"Anomalies Detected: {results['anomaly_count']}\n")
+                elif isinstance(results, list):
+                    f.write(f"Anomalies Detected: {len(results)}\n")
+            else:
+                f.write(f"Analysis Status: Not performed - {anomaly_info.get('reason', 'Unknown reason')}\n")
+            f.write("\n")
+            
+            # SLO Analysis
+            f.write("SLO COMPLIANCE ANALYSIS\n")
+            f.write("-" * 25 + "\n")
+            slo_info = ai_report['slo_analysis']
+            if slo_info.get('enabled', False):
+                f.write("SLO Tracking: Enabled\n")
+                targets = slo_info.get('targets', {})
+                for metric, target in targets.items():
+                    f.write(f"  • {metric.replace('_', ' ').title()}: {target}%\n")
+                
+                current_perf = slo_info.get('current_performance', {})
+                current_avail = current_perf.get('global_availability', 0)
+                f.write(f"\nCurrent Performance:\n")
+                f.write(f"  • Global Availability: {current_avail:.2f}%\n")
+            else:
+                f.write(f"SLO Tracking: Disabled - {slo_info.get('reason', 'Unknown reason')}\n")
+            f.write("\n")
+            
+            # Recommendations
+            f.write("RECOMMENDATIONS\n")
+            f.write("-" * 15 + "\n")
+            for i, rec in enumerate(ai_report['recommendations'], 1):
+                f.write(f"{i}. [{rec['priority']}] {rec['title']}\n")
+                f.write(f"   Category: {rec['category']}\n")
+                f.write(f"   Description: {rec['description']}\n\n")
+            
+            f.write(f"\nReport generated by Red Hat Status Checker v3.1.0\n")
+            f.write(f"Generated at: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n")
+        
+        # Display results
+        app.presenter.present_message(f"\n✅ AI Analysis Report Generated Successfully!")
+        app.presenter.present_message("=" * 50)
+        
+        json_size = os.path.getsize(json_filename) / 1024
+        txt_size = os.path.getsize(txt_filename) / 1024
+        
+        app.presenter.present_message(f"📄 JSON Report: {json_filename}")
+        app.presenter.present_message(f"   Size: {json_size:.1f} KB")
+        
+        app.presenter.present_message(f"📋 Text Report: {txt_filename}")
+        app.presenter.present_message(f"   Size: {txt_size:.1f} KB")
+        
+        app.presenter.present_message(f"\n📊 Report Summary:")
+        app.presenter.present_message(f"   • Services Analyzed: {health_metrics.get('total_services', 0)}")
+        app.presenter.present_message(f"   • Health Score: {health_metrics.get('availability_percentage', 0):.1f}%")
+        app.presenter.present_message(f"   • Recommendations: {len(recommendations)}")
+        app.presenter.present_message(f"   • Generated: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
+        
+        app.presenter.present_message("\n" + "=" * 50)
+        
+    except Exception as e:
+        app.presenter.present_error(f"Error generating AI report: {e}")
+        logging.error(f"AI report generation error: {e}", exc_info=True)
 
 def handle_export_history(app, args):
-    app.presenter.present_message("📂 Export History handler not fully implemented in this refactoring.")
+    """Export historical data to files in various formats"""
+    try:
+        app.presenter.present_message("📂 HISTORICAL DATA EXPORT")
+        app.presenter.present_message("=" * 50)
+        
+        # Check if database is available for historical data
+        if not hasattr(app, 'db_manager') or not app.db_manager:
+            app.presenter.present_error("Database not available for historical data export")
+            app.presenter.present_message("💡 Enable database features in config.json to collect historical data")
+            return
+        
+        if not hasattr(app.db_manager, 'is_enabled') or not app.db_manager.is_enabled():
+            app.presenter.present_error("Database is not enabled for historical data export")
+            app.presenter.present_message("💡 Enable database in config.json and run some status checks first")
+            return
+        
+        # Get export format from args
+        export_format = getattr(args, 'format', 'json').lower()
+        if export_format not in ['json', 'csv', 'txt']:
+            export_format = 'json'
+        
+        # Ensure output directory exists
+        output_dir = getattr(args, 'output', '.')
+        os.makedirs(output_dir, exist_ok=True)
+        
+        # Generate timestamp for file naming
+        timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
+        
+        app.presenter.present_message(f"\n📊 Collecting historical data...")
+        app.presenter.present_message(f"📁 Output directory: {output_dir}")
+        app.presenter.present_message(f"📄 Export format: {export_format.upper()}")
+        
+        # Get historical data
+        try:
+            # Get comprehensive historical data
+            app.presenter.present_message("\n🔍 Fetching status history...")
+            status_history = app.db_manager.get_status_history(limit=1000)  # Get up to 1000 records
+            
+            if not status_history:
+                app.presenter.present_message("⚠️ No historical status data found")
+                app.presenter.present_message("💡 Run some status checks (quick/simple/full) to collect data first")
+                return
+            
+            app.presenter.present_message(f"✅ Found {len(status_history)} status records")
+            
+            # Get analytics history if available
+            analytics_history = []
+            if hasattr(app.db_manager, 'get_analytics_history'):
+                try:
+                    app.presenter.present_message("🔍 Fetching analytics history...")
+                    analytics_history = app.db_manager.get_analytics_history(limit=500)
+                    if analytics_history:
+                        app.presenter.present_message(f"✅ Found {len(analytics_history)} analytics records")
+                    else:
+                        app.presenter.present_message("ℹ️ No analytics history available")
+                except Exception as e:
+                    app.presenter.present_message(f"⚠️ Could not fetch analytics history: {e}")
+            
+            # Get notification history if available
+            notification_history = []
+            if hasattr(app.db_manager, 'get_notification_history'):
+                try:
+                    app.presenter.present_message("🔍 Fetching notification history...")
+                    notification_history = app.db_manager.get_notification_history(limit=200)
+                    if notification_history:
+                        app.presenter.present_message(f"✅ Found {len(notification_history)} notification records")
+                    else:
+                        app.presenter.present_message("ℹ️ No notification history available")
+                except Exception as e:
+                    app.presenter.present_message(f"⚠️ Could not fetch notification history: {e}")
+            
+        except Exception as e:
+            app.presenter.present_error(f"Error fetching historical data: {e}")
+            return
+        
+        # Prepare comprehensive export data
+        export_data = {
+            'metadata': {
+                'export_type': 'Historical Data Export',
+                'generated_at': datetime.now().isoformat(),
+                'version': '3.1.0',
+                'format': export_format,
+                'total_records': len(status_history) + len(analytics_history) + len(notification_history)
+            },
+            'status_history': status_history,
+            'analytics_history': analytics_history,
+            'notification_history': notification_history,
+            'summary': {}
+        }
+        
+        # Generate summary statistics
+        app.presenter.present_message("\n📈 Generating export summary...")
+        
+        summary = {
+            'data_overview': {
+                'status_records': len(status_history),
+                'analytics_records': len(analytics_history),
+                'notification_records': len(notification_history),
+                'date_range': {},
+                'availability_stats': {}
+            },
+            'trends': {},
+            'service_statistics': {}
+        }
+        
+        # Calculate date range
+        if status_history:
+            timestamps = [record.get('timestamp') for record in status_history if record.get('timestamp')]
+            if timestamps:
+                # Handle both string and datetime timestamps
+                parsed_timestamps = []
+                for ts in timestamps:
+                    try:
+                        if isinstance(ts, str):
+                            parsed_ts = datetime.fromisoformat(ts.replace('Z', '+00:00'))
+                        else:
+                            parsed_ts = ts
+                        parsed_timestamps.append(parsed_ts)
+                    except:
+                        continue
+                
+                if parsed_timestamps:
+                    earliest = min(parsed_timestamps)
+                    latest = max(parsed_timestamps)
+                    summary['data_overview']['date_range'] = {
+                        'earliest': earliest.isoformat(),
+                        'latest': latest.isoformat(),
+                        'span_days': (latest - earliest).days
+                    }
+        
+        # Calculate availability statistics
+        if status_history:
+            availabilities = [record.get('availability_percentage', 0) for record in status_history]
+            if availabilities:
+                summary['data_overview']['availability_stats'] = {
+                    'average': sum(availabilities) / len(availabilities),
+                    'minimum': min(availabilities),
+                    'maximum': max(availabilities),
+                    'latest': availabilities[0] if availabilities else 0
+                }
+        
+        # Calculate service statistics
+        service_counts = {}
+        issue_counts = {}
+        for record in status_history:
+            total_services = record.get('total_services', 0)
+            services_with_issues = record.get('services_with_issues', 0)
+            
+            if total_services > 0:
+                if total_services not in service_counts:
+                    service_counts[total_services] = 0
+                service_counts[total_services] += 1
+            
+            if services_with_issues > 0:
+                if services_with_issues not in issue_counts:
+                    issue_counts[services_with_issues] = 0
+                issue_counts[services_with_issues] += 1
+        
+        summary['service_statistics'] = {
+            'most_common_service_count': max(service_counts.items(), key=lambda x: x[1])[0] if service_counts else 0,
+            'total_issue_occurrences': sum(issue_counts.values()),
+            'max_concurrent_issues': max(issue_counts.keys()) if issue_counts else 0
+        }
+        
+        export_data['summary'] = summary
+        
+        # Export in the requested format
+        app.presenter.present_message(f"\n💾 Exporting data in {export_format.upper()} format...")
+        
+        if export_format == 'json':
+            # Export to JSON
+            filename = os.path.join(output_dir, f"redhat_status_history_{timestamp}.json")
+            
+            with open(filename, 'w', encoding='utf-8') as f:
+                json.dump(export_data, f, indent=2, ensure_ascii=False, default=str)
+            
+            file_size = os.path.getsize(filename) / 1024
+            app.presenter.present_message(f"📄 JSON Export: {filename}")
+            app.presenter.present_message(f"   Size: {file_size:.1f} KB")
+            
+        elif export_format == 'csv':
+            # Export to CSV files (separate files for different data types)
+            
+            # Status history CSV
+            status_csv = os.path.join(output_dir, f"redhat_status_history_{timestamp}.csv")
+            app.presenter.present_message("📊 Creating status history CSV...")
+            
+            with open(status_csv, 'w', newline='', encoding='utf-8') as f:
+                if status_history:
+                    writer = csv.DictWriter(f, fieldnames=status_history[0].keys())
+                    writer.writeheader()
+                    writer.writerows(status_history)
+            
+            # Analytics history CSV (if available)
+            if analytics_history:
+                analytics_csv = os.path.join(output_dir, f"redhat_analytics_history_{timestamp}.csv")
+                app.presenter.present_message("📊 Creating analytics history CSV...")
+                
+                with open(analytics_csv, 'w', newline='', encoding='utf-8') as f:
+                    writer = csv.DictWriter(f, fieldnames=analytics_history[0].keys())
+                    writer.writeheader()
+                    writer.writerows(analytics_history)
+            
+            # Notification history CSV (if available)
+            if notification_history:
+                notification_csv = os.path.join(output_dir, f"redhat_notifications_history_{timestamp}.csv")
+                app.presenter.present_message("📊 Creating notification history CSV...")
+                
+                with open(notification_csv, 'w', newline='', encoding='utf-8') as f:
+                    writer = csv.DictWriter(f, fieldnames=notification_history[0].keys())
+                    writer.writeheader()
+                    writer.writerows(notification_history)
+            
+            # Summary CSV
+            summary_csv = os.path.join(output_dir, f"redhat_summary_{timestamp}.csv")
+            app.presenter.present_message("📊 Creating summary CSV...")
+            
+            with open(summary_csv, 'w', newline='', encoding='utf-8') as f:
+                writer = csv.writer(f)
+                writer.writerow(['Metric', 'Value'])
+                writer.writerow(['Total Status Records', len(status_history)])
+                writer.writerow(['Total Analytics Records', len(analytics_history)])
+                writer.writerow(['Total Notification Records', len(notification_history)])
+                
+                if summary['data_overview']['availability_stats']:
+                    stats = summary['data_overview']['availability_stats']
+                    writer.writerow(['Average Availability', f"{stats['average']:.2f}%"])
+                    writer.writerow(['Minimum Availability', f"{stats['minimum']:.2f}%"])
+                    writer.writerow(['Maximum Availability', f"{stats['maximum']:.2f}%"])
+                    writer.writerow(['Latest Availability', f"{stats['latest']:.2f}%"])
+            
+            status_size = os.path.getsize(status_csv) / 1024
+            app.presenter.present_message(f"📄 Status CSV: {status_csv} ({status_size:.1f} KB)")
+            
+            if analytics_history:
+                analytics_size = os.path.getsize(analytics_csv) / 1024
+                app.presenter.present_message(f"📄 Analytics CSV: {analytics_csv} ({analytics_size:.1f} KB)")
+            
+            if notification_history:
+                notification_size = os.path.getsize(notification_csv) / 1024
+                app.presenter.present_message(f"📄 Notifications CSV: {notification_csv} ({notification_size:.1f} KB)")
+            
+            summary_size = os.path.getsize(summary_csv) / 1024
+            app.presenter.present_message(f"📄 Summary CSV: {summary_csv} ({summary_size:.1f} KB)")
+            
+        elif export_format == 'txt':
+            # Export to human-readable text file
+            filename = os.path.join(output_dir, f"redhat_status_history_{timestamp}.txt")
+            
+            with open(filename, 'w', encoding='utf-8') as f:
+                f.write("RED HAT STATUS CHECKER - HISTORICAL DATA EXPORT\n")
+                f.write("=" * 60 + "\n\n")
+                
+                # Metadata
+                f.write("EXPORT INFORMATION\n")
+                f.write("-" * 20 + "\n")
+                f.write(f"Generated: {export_data['metadata']['generated_at']}\n")
+                f.write(f"Version: {export_data['metadata']['version']}\n")
+                f.write(f"Total Records: {export_data['metadata']['total_records']}\n\n")
+                
+                # Summary
+                f.write("DATA SUMMARY\n")
+                f.write("-" * 15 + "\n")
+                f.write(f"Status Records: {summary['data_overview']['status_records']}\n")
+                f.write(f"Analytics Records: {summary['data_overview']['analytics_records']}\n")
+                f.write(f"Notification Records: {summary['data_overview']['notification_records']}\n\n")
+                
+                # Date range
+                if summary['data_overview']['date_range']:
+                    date_range = summary['data_overview']['date_range']
+                    f.write("DATE RANGE\n")
+                    f.write("-" * 10 + "\n")
+                    f.write(f"Earliest Record: {date_range['earliest']}\n")
+                    f.write(f"Latest Record: {date_range['latest']}\n")
+                    f.write(f"Time Span: {date_range['span_days']} days\n\n")
+                
+                # Availability statistics
+                if summary['data_overview']['availability_stats']:
+                    stats = summary['data_overview']['availability_stats']
+                    f.write("AVAILABILITY STATISTICS\n")
+                    f.write("-" * 25 + "\n")
+                    f.write(f"Average: {stats['average']:.2f}%\n")
+                    f.write(f"Minimum: {stats['minimum']:.2f}%\n")
+                    f.write(f"Maximum: {stats['maximum']:.2f}%\n")
+                    f.write(f"Latest: {stats['latest']:.2f}%\n\n")
+                
+                # Recent status history (last 20 records)
+                f.write("RECENT STATUS HISTORY (Last 20 Records)\n")
+                f.write("-" * 45 + "\n")
+                for i, record in enumerate(status_history[:20]):
+                    timestamp_str = record.get('timestamp', 'Unknown')
+                    availability = record.get('availability_percentage', 0)
+                    total_services = record.get('total_services', 0)
+                    operational = record.get('operational_services', 0)
+                    
+                    status_emoji = "🟢" if availability >= 99 else "🟡" if availability >= 95 else "🔴"
+                    f.write(f"{i+1:2d}. {status_emoji} {timestamp_str}: {availability:.1f}% ({operational}/{total_services})\n")
+                
+                if len(status_history) > 20:
+                    f.write(f"\n... and {len(status_history) - 20} more records\n")
+                
+                f.write(f"\nExport completed at: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n")
+            
+            file_size = os.path.getsize(filename) / 1024
+            app.presenter.present_message(f"📄 Text Export: {filename}")
+            app.presenter.present_message(f"   Size: {file_size:.1f} KB")
+        
+        # Display export summary
+        app.presenter.present_message("\n✅ EXPORT COMPLETED SUCCESSFULLY!")
+        app.presenter.present_message("=" * 50)
+        
+        app.presenter.present_message(f"📊 Export Summary:")
+        app.presenter.present_message(f"   • Status Records: {len(status_history)}")
+        if analytics_history:
+            app.presenter.present_message(f"   • Analytics Records: {len(analytics_history)}")
+        if notification_history:
+            app.presenter.present_message(f"   • Notification Records: {len(notification_history)}")
+        
+        if summary['data_overview']['date_range']:
+            date_range = summary['data_overview']['date_range']
+            app.presenter.present_message(f"   • Data Span: {date_range['span_days']} days")
+        
+        if summary['data_overview']['availability_stats']:
+            stats = summary['data_overview']['availability_stats']
+            app.presenter.present_message(f"   • Average Availability: {stats['average']:.1f}%")
+        
+        app.presenter.present_message(f"   • Export Format: {export_format.upper()}")
+        app.presenter.present_message(f"   • Output Directory: {output_dir}")
+        app.presenter.present_message(f"   • Generated: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
+        
+        # Provide usage recommendations
+        app.presenter.present_message(f"\n💡 USAGE RECOMMENDATIONS:")
+        app.presenter.present_message("   • Use JSON format for programmatic analysis")
+        app.presenter.present_message("   • Use CSV format for spreadsheet analysis")
+        app.presenter.present_message("   • Use TXT format for human-readable reports")
+        app.presenter.present_message("   • Consider archiving old exports to save space")
+        
+        app.presenter.present_message("\n" + "=" * 50)
+        
+    except Exception as e:
+        app.presenter.present_error(f"Error exporting historical data: {e}")
+        logging.error(f"Historical data export error: {e}", exc_info=True)
 
 def handle_watch(app, args):
     app.presenter.present_message(f"👁️  LIVE MONITORING MODE (refresh every {args.watch}s)")
@@ -1268,7 +2195,271 @@ def handle_watch(app, args):
         print("\n⏹️  Monitoring stopped")
 
 def handle_notify(app, args):
-    app.presenter.present_message("📢 Notify handler not fully implemented in this refactoring.")
+    """Send notifications for current service status"""
+    try:
+        app.presenter.present_message("📢 NOTIFICATION SYSTEM")
+        app.presenter.present_message("=" * 40)
+        
+        # Check if notification system is available
+        if not app.notification_manager:
+            app.presenter.present_error("Notification system not available (enterprise feature disabled)")
+            app.presenter.present_message("💡 Enable notifications in config.json to use this feature")
+            return
+        
+        # Get current status data
+        app.presenter.present_message("\n📊 Fetching current service status...")
+        api_response = fetch_status_data(app.api_client)
+        
+        if not api_response.success or not api_response.data:
+            app.presenter.present_error("Failed to fetch status data for notifications")
+            return
+        
+        status_data = api_response.data
+        health_metrics = app.api_client.get_service_health_metrics(status_data)
+        
+        # Analyze status for notification urgency
+        app.presenter.present_message("🔍 Analyzing status for notification urgency...")
+        
+        availability = health_metrics.get('availability_percentage', 0)
+        services_with_issues = health_metrics.get('services_with_issues', 0)
+        total_services = health_metrics.get('total_services', 0)
+        overall_status = health_metrics.get('overall_status', 'unknown')
+        
+        # Determine notification priority and content
+        if availability < 90:
+            priority = "critical"
+            urgency = "🚨 CRITICAL"
+            status_emoji = "🔴"
+        elif availability < 95:
+            priority = "high"
+            urgency = "⚠️ HIGH"
+            status_emoji = "🟡"
+        elif availability < 99:
+            priority = "medium" 
+            urgency = "📋 MEDIUM"
+            status_emoji = "🟡"
+        else:
+            priority = "low"
+            urgency = "✅ LOW"
+            status_emoji = "🟢"
+        
+        app.presenter.present_message(f"📊 Status Analysis Complete:")
+        app.presenter.present_message(f"   • Overall Availability: {availability:.1f}%")
+        app.presenter.present_message(f"   • Services with Issues: {services_with_issues}/{total_services}")
+        app.presenter.present_message(f"   • Notification Priority: {urgency}")
+        
+        # Prepare notification content
+        timestamp = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+        
+        # Create subject line
+        subject = f"Red Hat Services Status Alert - {urgency.split()[1]} Priority"
+        
+        # Create detailed message body
+        message_lines = [
+            f"🎯 Red Hat Services Status Report",
+            f"⏰ Generated: {timestamp}",
+            f"",
+            f"📊 SUMMARY:",
+            f"{status_emoji} Overall Availability: {availability:.1f}%",
+            f"📋 Total Services: {total_services}",
+            f"✅ Operational Services: {health_metrics.get('operational_services', 0)}",
+            f"⚠️ Services with Issues: {services_with_issues}",
+            f"🏷️ Overall Status: {overall_status}",
+            f"",
+            f"🔍 DETAILS:",
+        ]
+        
+        # Add service-specific details
+        components = status_data.get('components', [])
+        issue_services = [c for c in components if c.get('status') != 'operational']
+        
+        if issue_services:
+            message_lines.append(f"⚠️ Services with Issues ({len(issue_services)}):")
+            for service in issue_services[:10]:  # Limit to first 10 issues
+                service_name = service.get('name', 'Unknown Service')
+                service_status = service.get('status', 'unknown')
+                status_icon = "🔴" if 'major' in service_status else "🟡" if 'degraded' in service_status else "⚠️"
+                message_lines.append(f"   {status_icon} {service_name}: {service_status}")
+            
+            if len(issue_services) > 10:
+                message_lines.append(f"   ... and {len(issue_services) - 10} more services")
+        else:
+            message_lines.append("✅ All services are operational")
+        
+        # Add trending information if available
+        if hasattr(app, 'db_manager') and app.db_manager and hasattr(app.db_manager, 'is_enabled') and app.db_manager.is_enabled():
+            try:
+                recent_snapshots = app.db_manager.get_status_history(limit=5)
+                if len(recent_snapshots) >= 2:
+                    latest_avail = recent_snapshots[0].get('availability_percentage', 0)
+                    previous_avail = recent_snapshots[1].get('availability_percentage', 0)
+                    trend = latest_avail - previous_avail
+                    
+                    message_lines.append("")
+                    message_lines.append("📈 TREND ANALYSIS:")
+                    if abs(trend) < 0.1:
+                        message_lines.append("➡️ Status: Stable (no significant change)")
+                    elif trend > 0:
+                        message_lines.append(f"📈 Status: Improving (+{trend:.1f}% availability)")
+                    else:
+                        message_lines.append(f"📉 Status: Declining ({trend:.1f}% availability)")
+            except Exception as e:
+                message_lines.append("")
+                message_lines.append(f"⚠️ Trend analysis unavailable: {e}")
+        
+        # Add recommendations based on status
+        message_lines.append("")
+        message_lines.append("💡 RECOMMENDATIONS:")
+        
+        if availability < 95:
+            message_lines.append("   • Immediate attention required for service issues")
+            message_lines.append("   • Review affected services and escalate if needed")
+            message_lines.append("   • Monitor closely for further degradation")
+        elif availability < 99:
+            message_lines.append("   • Monitor affected services for resolution")
+            message_lines.append("   • Consider preventive measures")
+        else:
+            message_lines.append("   • Continue normal monitoring")
+            message_lines.append("   • All systems operating within normal parameters")
+        
+        message_lines.append("")
+        message_lines.append("🔗 For more details, check: https://status.redhat.com/")
+        message_lines.append("")
+        message_lines.append("Generated by Red Hat Status Checker v3.1.0")
+        
+        message_body = "\n".join(message_lines)
+        
+        # Prepare notification data
+        notification_data = {
+            'subject': subject,
+            'message': message_body,
+            'priority': priority,
+            'urgency': urgency,
+            'availability': availability,
+            'services_with_issues': services_with_issues,
+            'total_services': total_services,
+            'timestamp': timestamp,
+            'status_data': {
+                'overall_status': overall_status,
+                'page_name': health_metrics.get('page_name', 'Red Hat Status'),
+                'last_updated': health_metrics.get('last_updated', 'Unknown')
+            }
+        }
+        
+        # Send notifications through all enabled channels
+        app.presenter.present_message("\n📤 Sending notifications...")
+        
+        try:
+            # Get notification configuration
+            if hasattr(app.config, 'config') and isinstance(app.config.config, dict):
+                notification_config = app.config.config.get('notifications', {})
+            elif isinstance(app.config, dict):
+                notification_config = app.config.get('notifications', {})
+            else:
+                notification_config = {}
+            
+            # Track results
+            sent_notifications = []
+            failed_notifications = []
+            
+            # Send email notifications
+            email_config = notification_config.get('email', {})
+            if email_config.get('enabled', False):
+                app.presenter.present_message("   📧 Sending email notification...")
+                try:
+                    email_result = app.notification_manager.send_email(
+                        subject=subject,
+                        message=message_body,
+                        priority=priority
+                    )
+                    if email_result:
+                        sent_notifications.append("Email")
+                        app.presenter.present_message("      ✅ Email sent successfully")
+                    else:
+                        failed_notifications.append("Email")
+                        app.presenter.present_message("      ❌ Email failed to send")
+                except Exception as e:
+                    failed_notifications.append("Email")
+                    app.presenter.present_message(f"      ❌ Email error: {e}")
+            else:
+                app.presenter.present_message("   📧 Email notifications disabled")
+            
+            # Send webhook notifications
+            webhook_config = notification_config.get('webhooks', {})
+            if webhook_config.get('enabled', False):
+                app.presenter.present_message("   🔗 Sending webhook notification...")
+                try:
+                    webhook_result = app.notification_manager.send_webhook(notification_data)
+                    if webhook_result:
+                        sent_notifications.append("Webhook")
+                        app.presenter.present_message("      ✅ Webhook sent successfully")
+                    else:
+                        failed_notifications.append("Webhook")
+                        app.presenter.present_message("      ❌ Webhook failed to send")
+                except Exception as e:
+                    failed_notifications.append("Webhook")
+                    app.presenter.present_message(f"      ❌ Webhook error: {e}")
+            else:
+                app.presenter.present_message("   🔗 Webhook notifications disabled")
+            
+            # Send Slack notifications
+            slack_config = notification_config.get('slack', {})
+            if slack_config.get('enabled', False):
+                app.presenter.present_message("   💬 Sending Slack notification...")
+                try:
+                    slack_result = app.notification_manager.send_slack(
+                        message=message_body,
+                        priority=priority
+                    )
+                    if slack_result:
+                        sent_notifications.append("Slack")
+                        app.presenter.present_message("      ✅ Slack sent successfully")
+                    else:
+                        failed_notifications.append("Slack")
+                        app.presenter.present_message("      ❌ Slack failed to send")
+                except Exception as e:
+                    failed_notifications.append("Slack")
+                    app.presenter.present_message(f"      ❌ Slack error: {e}")
+            else:
+                app.presenter.present_message("   💬 Slack notifications disabled")
+            
+            # Display summary
+            app.presenter.present_message("\n📊 NOTIFICATION SUMMARY")
+            app.presenter.present_message("-" * 30)
+            
+            if sent_notifications:
+                app.presenter.present_message(f"✅ Successfully sent: {', '.join(sent_notifications)}")
+            
+            if failed_notifications:
+                app.presenter.present_message(f"❌ Failed to send: {', '.join(failed_notifications)}")
+            
+            if not sent_notifications and not failed_notifications:
+                app.presenter.present_message("ℹ️ No notification channels enabled")
+                app.presenter.present_message("💡 Enable email, webhook, or Slack in config.json")
+            
+            # Store notification in database if available
+            if hasattr(app, 'db_manager') and app.db_manager and hasattr(app.db_manager, 'is_enabled') and app.db_manager.is_enabled():
+                try:
+                    app.db_manager.log_notification(
+                        priority=priority,
+                        channels_sent=sent_notifications,
+                        channels_failed=failed_notifications,
+                        availability=availability,
+                        services_affected=services_with_issues
+                    )
+                    app.presenter.present_message("💾 Notification logged to database")
+                except Exception as e:
+                    app.presenter.present_message(f"⚠️ Failed to log notification: {e}")
+            
+        except Exception as e:
+            app.presenter.present_error(f"Error during notification sending: {e}")
+        
+        app.presenter.present_message("\n" + "=" * 40)
+        app.presenter.present_message(f"📢 Notification process completed at {datetime.now().strftime('%H:%M:%S')}")
+        
+    except Exception as e:
+        app.presenter.present_error(f"Error in notification handler: {e}")
+        logging.error(f"Notification handler error: {e}", exc_info=True)
 
 def handle_benchmark(app, args):
     """Run performance benchmark tests"""
@@ -1349,7 +2540,323 @@ def handle_benchmark(app, args):
         app.presenter.present_error(f"Error running benchmark: {e}")
 
 def handle_setup(app, args):
-    app.presenter.present_message("⚙️ Setup handler not fully implemented in this refactoring.")
+    """Interactive configuration setup wizard"""
+    try:
+        app.presenter.present_message("⚙️ RED HAT STATUS CHECKER SETUP WIZARD")
+        app.presenter.present_message("=" * 60)
+        app.presenter.present_message("Welcome to the configuration setup wizard!")
+        app.presenter.present_message("This will help you configure the application settings.")
+        app.presenter.present_message("")
+        
+        # Load current configuration
+        config_path = Path(__file__).parent.parent / "config.json"
+        
+        try:
+            with open(config_path, 'r') as f:
+                current_config = json.load(f)
+        except (FileNotFoundError, json.JSONDecodeError) as e:
+            app.presenter.present_message(f"⚠️  Could not load existing config: {e}")
+            app.presenter.present_message("Creating a new configuration...")
+            current_config = {}
+        
+        # Create configuration sections
+        new_config = {}
+        
+        # 1. API Configuration
+        app.presenter.present_message("📡 API CONFIGURATION")
+        app.presenter.present_message("-" * 30)
+        
+        current_api = current_config.get('api', {})
+        
+        app.presenter.present_message(f"Current API URL: {current_api.get('base_url', 'https://status.redhat.com/api/v2/summary.json')}")
+        api_url = input("Enter API URL (or press Enter to keep current): ").strip()
+        if not api_url:
+            api_url = current_api.get('base_url', 'https://status.redhat.com/api/v2/summary.json')
+        
+        app.presenter.present_message(f"Current timeout: {current_api.get('timeout', 30)} seconds")
+        timeout_input = input("Enter timeout in seconds (or press Enter to keep current): ").strip()
+        timeout = int(timeout_input) if timeout_input.isdigit() else current_api.get('timeout', 30)
+        
+        app.presenter.present_message(f"Current max retries: {current_api.get('max_retries', 3)}")
+        retries_input = input("Enter max retries (or press Enter to keep current): ").strip()
+        max_retries = int(retries_input) if retries_input.isdigit() else current_api.get('max_retries', 3)
+        
+        new_config['api'] = {
+            'base_url': api_url,
+            'timeout': timeout,
+            'max_retries': max_retries
+        }
+        
+        # 2. Cache Configuration
+        app.presenter.present_message("\n💾 CACHE CONFIGURATION")
+        app.presenter.present_message("-" * 30)
+        
+        current_cache = current_config.get('cache', {})
+        
+        app.presenter.present_message(f"Current cache enabled: {current_cache.get('enabled', True)}")
+        cache_enabled_input = input("Enable caching? (y/n, or press Enter to keep current): ").strip().lower()
+        if cache_enabled_input in ['y', 'yes']:
+            cache_enabled = True
+        elif cache_enabled_input in ['n', 'no']:
+            cache_enabled = False
+        else:
+            cache_enabled = current_cache.get('enabled', True)
+        
+        if cache_enabled:
+            app.presenter.present_message(f"Current cache duration: {current_cache.get('duration_minutes', 5)} minutes")
+            cache_duration_input = input("Enter cache duration in minutes (or press Enter to keep current): ").strip()
+            cache_duration = int(cache_duration_input) if cache_duration_input.isdigit() else current_cache.get('duration_minutes', 5)
+            
+            app.presenter.present_message(f"Current cache directory: {current_cache.get('directory', '.cache')}")
+            cache_dir = input("Enter cache directory (or press Enter to keep current): ").strip()
+            if not cache_dir:
+                cache_dir = current_cache.get('directory', '.cache')
+        else:
+            cache_duration = 5
+            cache_dir = '.cache'
+        
+        new_config['cache'] = {
+            'enabled': cache_enabled,
+            'duration_minutes': cache_duration,
+            'directory': cache_dir,
+            'max_size_mb': current_cache.get('max_size_mb', 100),
+            'auto_cleanup': current_cache.get('auto_cleanup', True)
+        }
+        
+        # 3. AI Analytics Configuration
+        app.presenter.present_message("\n🤖 AI ANALYTICS CONFIGURATION")
+        app.presenter.present_message("-" * 40)
+        
+        current_ai = current_config.get('ai_analytics', {})
+        
+        app.presenter.present_message(f"Current AI analytics enabled: {current_ai.get('enabled', True)}")
+        ai_enabled_input = input("Enable AI analytics? (y/n, or press Enter to keep current): ").strip().lower()
+        if ai_enabled_input in ['y', 'yes']:
+            ai_enabled = True
+        elif ai_enabled_input in ['n', 'no']:
+            ai_enabled = False
+        else:
+            ai_enabled = current_ai.get('enabled', True)
+        
+        if ai_enabled:
+            app.presenter.present_message(f"Current anomaly detection: {current_ai.get('anomaly_detection', True)}")
+            anomaly_input = input("Enable anomaly detection? (y/n, or press Enter to keep current): ").strip().lower()
+            if anomaly_input in ['y', 'yes']:
+                anomaly_detection = True
+            elif anomaly_input in ['n', 'no']:
+                anomaly_detection = False
+            else:
+                anomaly_detection = current_ai.get('anomaly_detection', True)
+            
+            app.presenter.present_message(f"Current predictive analysis: {current_ai.get('predictive_analysis', True)}")
+            predictive_input = input("Enable predictive analysis? (y/n, or press Enter to keep current): ").strip().lower()
+            if predictive_input in ['y', 'yes']:
+                predictive_analysis = True
+            elif predictive_input in ['n', 'no']:
+                predictive_analysis = False
+            else:
+                predictive_analysis = current_ai.get('predictive_analysis', True)
+        else:
+            anomaly_detection = False
+            predictive_analysis = False
+        
+        new_config['ai_analytics'] = {
+            'enabled': ai_enabled,
+            'anomaly_detection': anomaly_detection,
+            'predictive_analysis': predictive_analysis,
+            'learning_window': current_ai.get('learning_window', 50),
+            'anomaly_threshold': current_ai.get('anomaly_threshold', 2.0),
+            'min_confidence': current_ai.get('min_confidence', 0.7)
+        }
+        
+        # 4. Database Configuration
+        app.presenter.present_message("\n💾 DATABASE CONFIGURATION")
+        app.presenter.present_message("-" * 35)
+        
+        current_db = current_config.get('database', {})
+        
+        app.presenter.present_message(f"Current database enabled: {current_db.get('enabled', True)}")
+        db_enabled_input = input("Enable database storage? (y/n, or press Enter to keep current): ").strip().lower()
+        if db_enabled_input in ['y', 'yes']:
+            db_enabled = True
+        elif db_enabled_input in ['n', 'no']:
+            db_enabled = False
+        else:
+            db_enabled = current_db.get('enabled', True)
+        
+        if db_enabled:
+            app.presenter.present_message(f"Current database path: {current_db.get('path', 'redhat_monitoring.db')}")
+            db_path = input("Enter database file path (or press Enter to keep current): ").strip()
+            if not db_path:
+                db_path = current_db.get('path', 'redhat_monitoring.db')
+            
+            app.presenter.present_message(f"Current retention: {current_db.get('retention_days', 30)} days")
+            retention_input = input("Enter data retention in days (or press Enter to keep current): ").strip()
+            retention_days = int(retention_input) if retention_input.isdigit() else current_db.get('retention_days', 30)
+        else:
+            db_path = 'redhat_monitoring.db'
+            retention_days = 30
+        
+        new_config['database'] = {
+            'enabled': db_enabled,
+            'path': db_path,
+            'retention_days': retention_days,
+            'auto_cleanup': current_db.get('auto_cleanup', True)
+        }
+        
+        # 5. SLO Configuration
+        app.presenter.present_message("\n🎯 SLO CONFIGURATION")
+        app.presenter.present_message("-" * 25)
+        
+        current_slo = current_config.get('slo', {})
+        
+        app.presenter.present_message(f"Current SLO tracking enabled: {current_slo.get('enabled', True)}")
+        slo_enabled_input = input("Enable SLO tracking? (y/n, or press Enter to keep current): ").strip().lower()
+        if slo_enabled_input in ['y', 'yes']:
+            slo_enabled = True
+        elif slo_enabled_input in ['n', 'no']:
+            slo_enabled = False
+        else:
+            slo_enabled = current_slo.get('enabled', True)
+        
+        if slo_enabled:
+            current_targets = current_slo.get('targets', {})
+            
+            app.presenter.present_message(f"Current global availability target: {current_targets.get('global_availability', 99.9)}%")
+            avail_input = input("Enter global availability target % (or press Enter to keep current): ").strip()
+            global_availability = float(avail_input) if avail_input.replace('.', '').isdigit() else current_targets.get('global_availability', 99.9)
+            
+            app.presenter.present_message(f"Current response time target: {current_targets.get('response_time', 2.0)}s")
+            response_input = input("Enter response time target in seconds (or press Enter to keep current): ").strip()
+            response_time = float(response_input) if response_input.replace('.', '').isdigit() else current_targets.get('response_time', 2.0)
+            
+            targets = {
+                'global_availability': global_availability,
+                'response_time': response_time,
+                'uptime_monthly': current_targets.get('uptime_monthly', 99.5)
+            }
+        else:
+            targets = current_slo.get('targets', {})
+        
+        new_config['slo'] = {
+            'enabled': slo_enabled,
+            'targets': targets,
+            'tracking_period': current_slo.get('tracking_period', 'monthly'),
+            'alert_on_breach': current_slo.get('alert_on_breach', True)
+        }
+        
+        # 6. Notifications Configuration (simplified)
+        app.presenter.present_message("\n📧 NOTIFICATIONS CONFIGURATION")
+        app.presenter.present_message("-" * 40)
+        
+        current_notifications = current_config.get('notifications', {})
+        
+        app.presenter.present_message("Email notifications:")
+        current_email = current_notifications.get('email', {})
+        app.presenter.present_message(f"Current email enabled: {current_email.get('enabled', False)}")
+        email_enabled_input = input("Enable email notifications? (y/n, or press Enter to keep current): ").strip().lower()
+        if email_enabled_input in ['y', 'yes']:
+            email_enabled = True
+        elif email_enabled_input in ['n', 'no']:
+            email_enabled = False
+        else:
+            email_enabled = current_email.get('enabled', False)
+        
+        email_config = current_email.copy()
+        email_config['enabled'] = email_enabled
+        
+        # Copy other notification settings from current config
+        new_config['notifications'] = {
+            'email': email_config,
+            'webhooks': current_notifications.get('webhooks', {'enabled': False}),
+            'slack': current_notifications.get('slack', {'enabled': False})
+        }
+        
+        # Copy remaining sections from current config
+        for section in ['logging', 'output', 'performance']:
+            if section in current_config:
+                new_config[section] = current_config[section]
+        
+        # Add default sections if missing
+        if 'logging' not in new_config:
+            new_config['logging'] = {
+                'level': 'INFO',
+                'file': 'redhat_status.log',
+                'max_size_mb': 10,
+                'backup_count': 3
+            }
+        
+        if 'output' not in new_config:
+            new_config['output'] = {
+                'timestamp_format': '%Y%m%d_%H%M%S',
+                'create_summary_report': True
+            }
+        
+        if 'performance' not in new_config:
+            new_config['performance'] = {
+                'enable_profiling': False,
+                'memory_profiling': False,
+                'max_concurrent_operations': 5
+            }
+        
+        # Show configuration summary
+        app.presenter.present_message("\n📋 CONFIGURATION SUMMARY")
+        app.presenter.present_message("=" * 40)
+        app.presenter.present_message(f"API URL: {new_config['api']['base_url']}")
+        app.presenter.present_message(f"Cache Enabled: {new_config['cache']['enabled']}")
+        app.presenter.present_message(f"AI Analytics: {new_config['ai_analytics']['enabled']}")
+        app.presenter.present_message(f"Database Storage: {new_config['database']['enabled']}")
+        app.presenter.present_message(f"SLO Tracking: {new_config['slo']['enabled']}")
+        app.presenter.present_message(f"Email Notifications: {new_config['notifications']['email']['enabled']}")
+        
+        # Confirm save
+        app.presenter.present_message("")
+        save_input = input("Save this configuration? (Y/n): ").strip().lower()
+        if save_input in ['', 'y', 'yes']:
+            # Create backup of existing config
+            if config_path.exists():
+                backup_path = config_path.with_suffix('.backup')
+                import shutil
+                shutil.copy2(config_path, backup_path)
+                app.presenter.present_message(f"📁 Backup created: {backup_path}")
+            
+            # Save new configuration
+            with open(config_path, 'w') as f:
+                json.dump(new_config, f, indent=2)
+            
+            app.presenter.present_message(f"✅ Configuration saved to: {config_path}")
+            app.presenter.present_message("")
+            app.presenter.present_message("🔄 Configuration updated successfully!")
+            app.presenter.present_message("You may need to restart the application for all changes to take effect.")
+            
+            # Validate the new configuration
+            app.presenter.present_message("\n🔍 Validating configuration...")
+            try:
+                from redhat_status.config.config_manager import ConfigManager
+                config_manager = ConfigManager(str(config_path))
+                validation = config_manager.validate()
+                
+                if validation['valid']:
+                    app.presenter.present_message("✅ Configuration validation passed!")
+                else:
+                    app.presenter.present_message("⚠️  Configuration validation warnings:")
+                    for warning in validation.get('warnings', []):
+                        app.presenter.present_message(f"  • {warning}")
+                    for error in validation.get('errors', []):
+                        app.presenter.present_message(f"  ❌ {error}")
+            except Exception as e:
+                app.presenter.present_message(f"⚠️  Could not validate configuration: {e}")
+        else:
+            app.presenter.present_message("❌ Configuration not saved.")
+        
+        app.presenter.present_message("\n" + "=" * 60)
+        app.presenter.present_message("Setup wizard completed!")
+        
+    except KeyboardInterrupt:
+        app.presenter.present_message("\n\n⏹️  Setup wizard cancelled by user.")
+    except Exception as e:
+        app.presenter.present_error(f"Error in setup wizard: {e}")
+        logging.error(f"Setup wizard error: {e}", exc_info=True)
 
 if __name__ == "__main__":
     main()
