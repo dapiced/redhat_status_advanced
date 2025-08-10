@@ -682,7 +682,7 @@ class DatabaseManager:
             return {}
     
     @performance_monitor
-    def cleanup_old_data(self, days_to_keep: int = 30) -> int:
+    def cleanup_old_data(self, days_to_keep: int = 30) -> Dict[str, int]:
         """Clean up old data from database"""
         cleanup_results = {}
         
@@ -743,11 +743,11 @@ class DatabaseManager:
                     ''', (sum(cleanup_results.values()),))
                     
             self.logger.info(f"Cleanup completed: {cleanup_results}")
-            return sum(cleanup_results.values())
+            return cleanup_results
             
         except Exception as e:
             self.logger.error(f"Failed to cleanup old data: {e}")
-            return 0
+            return {}
     
     @performance_monitor
     def vacuum_database(self) -> bool:

@@ -524,20 +524,6 @@ Advanced Features:
         help='Port for the Prometheus exporter (default: 8000)'
     )
 
-    # --- Web UI Arguments ---
-    parser.add_argument(
-        '--web',
-        action='store_true',
-        help='Run the Flask web UI'
-    )
-
-    parser.add_argument(
-        '--web-port',
-        type=int,
-        default=5000,
-        help='Port for the Web UI (default: 5000)'
-    )
-
     parser.add_argument(
         '--setup',
         action='store_true',
@@ -559,16 +545,15 @@ def main():
         parser = create_argument_parser()
         args = parser.parse_args()
 
-        # Handle web UI flag, which is a special mode that runs exclusively
-        if args.web:
-            from redhat_status.web.app import run_web_server
-            run_web_server(port=args.web_port)
-            return
         
         exporter_module = None
         if args.enable_exporter:
-            from redhat_status.exporters import prometheus_exporter as exporter_module
-            exporter_module.start_exporter_http_server(port=args.exporter_port)
+            from redhat_status.exporters.prometheus_exporter import get_prometheus_exporter
+            exporter_module = get_prometheus_exporter(port=args.exporter_port, enabled=True)
+            if exporter_module.start_server():
+                print(f"📈 Prometheus exporter started on http://localhost:{args.exporter_port}")
+            else:
+                print("❌ Failed to start Prometheus exporter")
 
         app = RedHatStatusChecker(exporter_module=exporter_module)
         presenter = app.presenter
@@ -628,7 +613,26 @@ def main():
         
         # Handle interactive mode
         if mode is None and not args.quiet and not (args.filter != 'all' or args.search):
-            mode = get_interactive_mode(presenter)
+            # If exporter is enabled, check if user wants to run in exporter-only mode
+            if args.enable_exporter:
+                presenter.present_message("Available modes:")
+                presenter.present_message("  quick    - Global status only")
+                presenter.present_message("  simple   - Main services")
+                presenter.present_message("  full     - Complete structure")
+                presenter.present_message("  export   - Export data")
+                presenter.present_message("  all      - Display all")
+                presenter.present_message("  (or press Enter to run exporter only)")
+                print()
+                user_input = input("Choose a mode (or press Enter for exporter only): ").lower()
+                if user_input:
+                    if user_input in ['quick', 'simple', 'full', 'export', 'all']:
+                        mode = user_input
+                    else:
+                        presenter.present_error(f"Mode '{user_input}' not recognized, running exporter only")
+                        mode = None
+                # If user just pressed Enter, mode remains None for exporter-only
+            else:
+                mode = get_interactive_mode(presenter)
 
         # If no mode is specified (e.g. only --enable-exporter is used),
         # keep the application alive to serve metrics.
