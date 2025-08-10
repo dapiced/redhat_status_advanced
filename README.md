@@ -434,7 +434,6 @@ Example configuration structure:
 ### Common Issues
 
 **Command Line Syntax Errors**
-- **Use double dashes** for long options: `--concurrent-check` not `-concurrent-check`
 - **Check spelling**: Flags are case-sensitive and must match exactly
 - **Use quotes** for search terms with spaces: `--search "red hat"`
 
