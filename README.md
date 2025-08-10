@@ -1,4 +1,4 @@
-# Red Hat Status Checker
+# Red Hat Status Checker - Advanced
 
 A comprehensive Python monitoring solution for Red Hat services with analytics, notifications, and Prometheus integration.
 
