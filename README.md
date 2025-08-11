@@ -17,7 +17,7 @@ Red Hat Status Checker is an enterprise-grade monitoring tool that tracks Red Ha
 - **Real-time Monitoring**: Track Red Hat service health and availability
 - **Statistical Analysis**: Anomaly detection and trend forecasting using Z-score analysis
 - **Prometheus Integration**: Built-in exporter for metrics collection
-- **Multi-Channel Alerts**: Email and webhook notifications (Slack, Teams, etc.)
+- **Multi-Channel Alerts**: Email and webhook notifications (Slack, Teams, etc)
 - **Historical Data**: SQLite database for trend analysis and reporting
 - **CLI Interface**: Comprehensive command-line tools for automation
 - **Modular Architecture**: Clean, maintainable codebase
