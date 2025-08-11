@@ -10,7 +10,7 @@ Red Hat Status Checker is an enterprise-grade monitoring tool that tracks Red Ha
 
 ## 📋 Démo CLI Redhat Status (It takes a few seconds to load)
 
-![Démo CLI Redhat Status](./redhat_status.svg)
+![Demo CLI Redhat Status](./redhat_status.svg)
 
 ## ✨ Features
 
