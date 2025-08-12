@@ -8,6 +8,8 @@ A comprehensive Python monitoring solution for Red Hat services with analytics, 
 
 Red Hat Status Checker is an enterprise-grade monitoring tool that tracks Red Hat service health in real-time. It provides statistical analysis, historical data storage, and integrates with Prometheus for comprehensive monitoring workflows.
 
+Redhat status page is based on the software https://www.atlassian.com/software/statuspage
+
 ## 📋 Demo CLI Redhat Status (It takes a few seconds to load)
 
 ![Demo CLI Redhat Status](./redhat_status_demo.svg)
