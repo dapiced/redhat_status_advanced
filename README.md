@@ -10,10 +10,6 @@ Red Hat Status Checker is an enterprise-grade monitoring tool that tracks Red Ha
 
 Redhat status page is based on the software https://www.atlassian.com/software/statuspage
 
-## 📋 Demo CLI Redhat Status (It takes a few seconds to load)
-
-![Demo CLI Redhat Status](./redhat_status_demo.svg)
-
 ## ✨ Features
 
 - **Real-time Monitoring**: Track Red Hat service health and availability
@@ -528,10 +524,3 @@ Example configuration structure:
 - Check logs in `redhat_status.log`
 - Run `--health-report` for system status overview
 - Use `--help` for complete command reference
-
-### How to make a demo cli
-- sudo apt install asciinema  
-- sudo apt install npm  
-- asciinema rec demo.cast # Ctrl+D to stop after running cli command demo
-- npx svg-term-cli --in demo.cast --out demo.svg --window # convert .cast to .svg file
-- add `![Demo CLI](./demo.svg)` to the README.md
