@@ -2,7 +2,7 @@
 
 A comprehensive Python monitoring solution for Red Hat services with analytics, notifications, and Prometheus integration.
 
-**Version:** 3.1.1 - Production Edition
+**Version:** 3.1.1 - Advanced Edition
 
 ## 🚀 Overview
 
