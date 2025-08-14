@@ -10,7 +10,7 @@ Red Hat Status Checker is an enterprise-grade monitoring tool that tracks Red Ha
 
 Redhat status page is based on the software https://www.atlassian.com/software/statuspage
 
-Redhat status page API
+Redhat status API
 - https://status.redhat.com/api/v2/
 - https://status.redhat.com/api/v2/summary.json
 
